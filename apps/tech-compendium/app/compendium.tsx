@@ -17,6 +17,16 @@ function Icon({ value, fallback, className = "" }: { value: string; fallback: st
   return src ? <img className={className} src={src} alt="" /> : <>{value || fallback}</>;
 }
 
+const inlineIconFile: Record<string, string> = { "Drowned Aegis": "DrownedÆgis.png" };
+const inlineIconUrl = (name: string) => `https://nullscape.wiki/wiki/Special:Redirect/file/${encodeURIComponent(inlineIconFile[name] ?? name.replace(/[\s:'’]/g, "") + ".png")}`;
+function RichText({ children }: { children: string }) {
+  const parts = children.split(/(\[\[icon:[^\]]+\]\])/g);
+  return <>{parts.map((part, index) => {
+    const match = part.match(/^\[\[icon:(.+)\]\]$/);
+    return match ? <img className="inline-emoji" src={inlineIconUrl(match[1])} alt={match[1]} title={match[1]} key={`${part}-${index}`} /> : <span key={index}>{part}</span>;
+  })}</>;
+}
+
 function videoSource(value: string) {
   const safe = safeMediaUrl(value);
   if (!safe) return { kind: "none", src: "" };
@@ -117,12 +127,12 @@ function InputMetronome({ block }: { block: CompendiumBlock }) {
 }
 
 function Block({ block }: { block: CompendiumBlock }) {
-  if (block.type === "heading") return <h2 className="article-heading">{block.content}</h2>;
-  if (block.type === "paragraph") return <p className="article-copy">{block.content}</p>;
-  if (block.type === "callout") return <aside className="callout"><span>✦</span><p>{block.content}</p></aside>;
+  if (block.type === "heading") return <h2 className="article-heading"><RichText>{block.content}</RichText></h2>;
+  if (block.type === "paragraph") return <p className="article-copy"><RichText>{block.content}</RichText></p>;
+  if (block.type === "callout") return <aside className="callout"><span>✦</span><p><RichText>{block.content}</RichText></p></aside>;
   if (block.type === "steps") {
     const steps = block.content.split("\n").map((step) => step.trim()).filter(Boolean);
-    return <ol className="steps">{steps.map((step, index) => <li key={`${block.id}-${index}`}><b>{index + 1}</b><span>{step}</span></li>)}</ol>;
+    return <ol className="steps">{steps.map((step, index) => <li key={`${block.id}-${index}`}><b>{index + 1}</b><span><RichText>{step}</RichText></span></li>)}</ol>;
   }
   if (block.type === "image") {
     const src = safeMediaUrl(block.url);
@@ -191,7 +201,7 @@ export default function Compendium() {
           {activeTech ? <>
             <div className="article-kicker"><span><Icon value={activeTech.icon || activeClass?.icon || ""} fallback="✦" /></span>{activeClass?.name} tech</div>
             <h1>{activeTech.title}</h1>
-            <p className="article-summary">{activeTech.summary}</p>
+            <p className="article-summary"><RichText>{activeTech.summary}</RichText></p>
             <div className="article-rule" />
             <div className="article-content">{activeTech.blocks.map((block) => <Block block={block} key={block.id} />)}</div>
           </> : <div className="empty-article"><span>✦</span><h1>Nothing here yet</h1><p>Add a tech in the private editor and it will appear here.</p></div>}
