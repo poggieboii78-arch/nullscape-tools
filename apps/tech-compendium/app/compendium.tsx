@@ -148,7 +148,8 @@ function Block({ block }: { block: CompendiumBlock }) {
 }
 
 export default function Compendium() {
-  const [data, setData] = useState<CompendiumData>(starterCompendium);
+  const publicData = useMemo<CompendiumData>(() => ({ ...starterCompendium, classes: starterCompendium.classes.filter((item) => item.published).map((item) => ({ ...item, techs: item.techs.filter((tech) => tech.published) })) }), []);
+  const [data, setData] = useState<CompendiumData>(publicData);
   const [classId, setClassId] = useState(starterCompendium.classes[0]?.id ?? "");
   const [techId, setTechId] = useState(starterCompendium.classes[0]?.techs[0]?.id ?? "");
   const [loading, setLoading] = useState(true);

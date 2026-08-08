@@ -81,6 +81,7 @@ export default function Editor() {
   const [classPanel, setClassPanel] = useState(true);
   const [uploading, setUploading] = useState<"class" | "tech" | "">("");
   const [loaded, setLoaded] = useState(false);
+  const [version, setVersion] = useState("");
 
   useEffect(() => {
     fetch("/api/editor", { cache: "no-store" }).then(readJson).then((payload) => {
@@ -90,7 +91,7 @@ export default function Editor() {
         const stored = localStorage.getItem(draftKey);
         if (stored) { next = JSON.parse(stored) as CompendiumData; recovered = true; }
       } catch { localStorage.removeItem(draftKey); }
-      setData(next); setConnected(Boolean(payload.connected));
+      setData(next); setConnected(Boolean(payload.connected)); setVersion(payload.version ?? "");
       setClassId(next.classes[0]?.id ?? ""); setTechId(next.classes[0]?.techs[0]?.id ?? "");
       setStatus(recovered ? "dirty" : payload.connected ? "saved" : "error");
       setMessage(recovered ? "Recovered your autosaved draft" : payload.connected ? "Everything is saved" : "Publishing connection unavailable");
@@ -177,9 +178,9 @@ export default function Editor() {
   async function save() {
     setStatus("saving"); setMessage("Publishing changes…");
     try {
-      const response = await fetch("/api/editor", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(data) });
+      const response = await fetch("/api/editor", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data, version }) });
       const payload = await readJson(response); if (!response.ok) throw new Error(payload.error || `Publishing failed (${response.status}). Please try again.`);
-      setData(payload.data ?? data); localStorage.removeItem(draftKey); setStatus("saved"); setMessage("Published to the compendium"); setConnected(true);
+      setData(payload.data ?? data); setVersion(payload.version ?? version); localStorage.removeItem(draftKey); setStatus("saved"); setMessage("Published to the compendium"); setConnected(true);
     } catch (error) { try { localStorage.setItem(draftKey, JSON.stringify(data)); } catch {} setStatus("error"); setMessage(`${error instanceof Error ? error.message : "Save failed."} Your draft is safe on this device.`); }
   }
 

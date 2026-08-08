@@ -12,6 +12,7 @@ interface Env {
       };
     };
   };
+  ALLOWED_EMAIL?: string;
 }
 
 interface ExecutionContext {
@@ -28,6 +29,10 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    const email = request.headers.get("cf-access-authenticated-user-email")?.toLowerCase();
+    if (!env.ALLOWED_EMAIL || email !== env.ALLOWED_EMAIL.toLowerCase()) {
+      return new Response("Forbidden", { status: 403, headers: { "cache-control": "no-store" } });
+    }
 
     if (url.pathname === "/_vinext/image") {
       const allowedWidths = [...DEFAULT_DEVICE_SIZES, ...DEFAULT_IMAGE_SIZES];

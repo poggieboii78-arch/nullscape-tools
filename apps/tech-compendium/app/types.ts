@@ -1,3 +1,5 @@
+import source from "../data/compendium-data.json";
+
 export type BlockType = "heading" | "paragraph" | "steps" | "callout" | "video" | "image" | "metronome";
 
 export type CompendiumBlock = {
@@ -39,7 +41,7 @@ export type CompendiumData = {
   classes: CompendiumClass[];
 };
 
-export const starterCompendium: CompendiumData = {
+const fallbackCompendium: CompendiumData = {
   title: "Nullscape Tech Compendium",
   subtitle: "Class tricks, setups, and little things worth remembering.",
   classes: [
@@ -98,3 +100,7 @@ export const starterCompendium: CompendiumData = {
     },
   ],
 };
+
+export const starterCompendium: CompendiumData = Array.isArray(source.classes)
+  ? source as unknown as CompendiumData
+  : fallbackCompendium;

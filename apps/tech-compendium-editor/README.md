@@ -1,4 +1,10 @@
-# vinext-starter
+# Nullscape Tech Compendium Editor
+
+## Cloudflare deployment
+
+Protect the entire Worker with Cloudflare Access, then configure `ALLOWED_EMAIL` to the same email permitted by the Access policy. Add `GITHUB_TOKEN` with `wrangler secret put GITHUB_TOKEN`; use a fine-grained token with **Contents: Read and write** access to `poggieboii78-arch/nullscape-tools` only. Never commit the token.
+
+Publishing updates `apps/tech-compendium/data/compendium-data.json` on `main`, which triggers the GitHub Pages rebuild. The API sends the current Git blob SHA so stale editor tabs cannot overwrite a newer publication.
 
 A clean full-stack starter running on
 [vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
