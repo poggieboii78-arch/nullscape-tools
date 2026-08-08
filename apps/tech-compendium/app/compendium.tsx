@@ -204,13 +204,17 @@ export default function Compendium() {
 
         <article className="article-panel">
           {loading && <div className="loading-pill">Syncing compendium…</div>}
-          {activeTech ? <>
-            <div className="article-kicker"><span><Icon value={activeTech.icon || activeClass?.icon || ""} fallback="✦" /></span>{activeClass?.name} tech</div>
-            <h1>{activeTech.title}</h1>
-            <p className="article-summary"><RichText>{activeTech.summary}</RichText></p>
-            <div className="article-rule" />
-            <div className="article-content">{activeTech.blocks.map((block) => <Block block={block} key={block.id} />)}</div>
-          </> : <div className="empty-article"><span>✦</span><h1>Nothing here yet</h1><p>Add a tech in the private editor and it will appear here.</p></div>}
+          <div className="article-card">
+            {activeTech ? <>
+              <header className="article-hero">
+                <div className="article-kicker"><span><Icon value={activeTech.icon || activeClass?.icon || ""} fallback="✦" /></span>{activeClass?.name} tech</div>
+                <h1>{activeTech.title}</h1>
+                <p className="article-summary"><RichText>{activeTech.summary}</RichText></p>
+                <div className="article-rule" />
+              </header>
+              <div className="article-content">{activeTech.blocks.map((block) => <Block block={block} key={block.id} />)}</div>
+            </> : <div className="empty-article"><span>✦</span><h1>Nothing here yet</h1><p>Add a tech in the private editor and it will appear here.</p></div>}
+          </div>
         </article>
       </div>
     </main>
