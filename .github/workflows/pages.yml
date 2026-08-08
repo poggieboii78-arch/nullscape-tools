@@ -1,0 +1,56 @@
+name: Deploy public tools to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/*/package-lock.json
+      - name: Build public apps
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf _site
+          mkdir -p _site/medal _site/altar _site/shop
+          for app in tools-home medal-pool altar-calculator shop-calculator; do
+            npm ci --prefix "apps/$app"
+            (cd "apps/$app" && npx next build)
+          done
+          cp -R apps/tools-home/out/. _site/
+          cp -R apps/medal-pool/out/. _site/medal/
+          cp -R apps/altar-calculator/out/. _site/altar/
+          cp -R apps/shop-calculator/out/. _site/shop/
+          touch _site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

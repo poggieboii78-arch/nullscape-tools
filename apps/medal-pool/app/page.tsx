@@ -30,7 +30,7 @@ type RunSnapshot = {
 };
 
 const storageKey = "nullscape-medal-state-v2";
-const homeUrl = "https://nullscape-tools.poggieboii78.chatgpt.site";
+const homeUrl = "/nullscape-tools/";
 
 function hasGreaterCurseShop(level:number,difficulty:Difficulty){
   if(difficulty==="casual")return level===15||(level>=25&&level%5===0);
