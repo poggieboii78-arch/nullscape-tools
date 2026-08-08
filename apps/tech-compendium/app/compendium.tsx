@@ -155,6 +155,10 @@ export default function Compendium() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_STATIC_COMPENDIUM === "true") {
+      setLoading(false);
+      return;
+    }
     fetch("/api/compendium", { cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject())
       .then((next: CompendiumData) => {
@@ -180,7 +184,7 @@ export default function Compendium() {
   return (
     <main className="site-shell" style={{ "--active-accent": activeClass?.accent ?? "#7770ff" } as React.CSSProperties}>
       <header className="topbar">
-        <a className="brand" href="/" aria-label="Nullscape Tech Compendium home"><span className="brand-mark">N</span><span><b>Tech Compendium</b><small>Nullscape class knowledge</small></span></a>
+        <a className="brand" href="/nullscape-tools/" aria-label="Nullscape Tools home"><span className="brand-mark">N</span><span><b>Tech Compendium</b><small>Nullscape class knowledge</small></span></a>
         <nav className="class-tabs" aria-label="Classes">
           {data.classes.map((item) => <button key={item.id} className={item.id === activeClass?.id ? "active" : ""} onClick={() => chooseClass(item.id)}><span><Icon value={item.icon} fallback="✦" /></span>{item.name}</button>)}
         </nav>

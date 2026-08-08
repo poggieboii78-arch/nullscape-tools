@@ -202,11 +202,12 @@ type DockTab="run"|"enemies"|"curses"|"medal"|"greater"|"upgrades";
 const tabLabels:Record<DockTab,string>={run:"Run Data",enemies:"Enemies",curses:"Curses",medal:"Medal Curses",greater:"Greater",upgrades:"Upgrades"};
 
 export function RunDock({run,update,reset,toolId,toolSteps=[]}:{run:SharedRun;update:(change:Partial<SharedRun>|((current:SharedRun)=>Partial<SharedRun>))=>void;reset:()=>void;toolId:string;toolSteps?:TourStep[]}){
-  const [open,setOpen]=useState(false);const [tab,setTab]=useState<DockTab>("run");const [search,setSearch]=useState("");const [checkPossible,setCheckPossible]=useState(true);const [tour,setTour]=useState(-1);const [historyOpen,setHistoryOpen]=useState(false);const [focusRect,setFocusRect]=useState<{left:number;top:number;width:number;height:number}|null>(null);const seenKey=`nullscape-tour-seen-${toolId}-v7`;const activity=useActivityState();const archives=useArchiveState();
+  const [open,setOpen]=useState(false);const [tab,setTab]=useState<DockTab>("run");const [search,setSearch]=useState("");const [checkPossible,setCheckPossible]=useState(true);const [tour,setTour]=useState(-1);const [historyOpen,setHistoryOpen]=useState(false);const [focusRect,setFocusRect]=useState<{left:number;top:number;width:number;height:number}|null>(null);const seenKey=`nullscape-tour-seen-${toolId}-v8`;const activity=useActivityState();const archives=useArchiveState();
   const steps=useMemo<TourStep[]>(()=>[
     ...(toolId==="home"?[
       {selector:"[data-tour='dock-handle']",title:"Your run follows you",text:"Open the Quick Menu here. The newest edit wins if the site is open in more than one tab."},
       {selector:"[data-tour='dock-body'] .dock-tabs",title:"Everything in one place",text:"Track run data, enemies, regular Curses, Medal Curses, Greater Curses, and upgrades here."},
+      {selector:"[data-tour='dock-body'] .input-mode",title:"Choose where you enter data",text:"Use this toggle to enter run data in the Quick Menu, on each tool page, or in both places—whichever you prefer."},
     ]:[]),...toolSteps,
   ],[toolId,toolSteps]);
   useEffect(()=>{if(localStorage.getItem(seenKey)!=="1")setTour(0);},[seenKey]);
