@@ -10,7 +10,7 @@ type ChanceCurse = "none" | "high-roller" | "tweaked-odds" | "both-chaos";
 type Curse = { name:string; value:number; chaos?:boolean };
 type SavedState = { mode:Mode };
 
-const homeUrl = "https://nullscape-tools.poggieboii78.chatgpt.site";
+const homeUrl = "/nullscape-tools/";
 const storageKey = "nullscape-altar-state-v2";
 const wikiImage = (name:string) => `https://nullscape.wiki/wiki/Special:Redirect/file/${encodeURIComponent(name)}`;
 
