@@ -10,6 +10,34 @@ const makeId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "untitled";
 const draftKey = "nullscape-compendium-editor-draft-v1";
 
+const classIcons = ["Charger", "Diver", "Spirit", "Grappler", "Glider", "Prisoner", "Wanted", "Bruiser", "phoon"];
+const upgradeIcons = [
+  "Adrenaline", "Business License", "Paycheck", "Swiftness Ring", "Better Jump Pads", "Defuse Kit", "Double Jump", "Grapple Points", "Last Robloxian Standing", "Medal", "Radar", "Tria Orbs", "Advanced Gravity Coil", "Fanny Pack", "Grace Wings", "Helmet", "Ice Skates", "Pocket Bell", "Radar Module: Altars", "Radar Module: Enemies", "Radar Module: Players", "Radar Module: Tripmines", "More Altars", "Larger Grapple Points", "Ninja Belt", "Subspacial Barrier", "Gift Magnet", "Matrix Tetrahedron", "Radar Module: Instruments", "Shark Tail", "Shield", "Sport Shoes", "Panic Necklace", "Drowned Aegis", "Gift Idol", "Miniature Hourglass",
+];
+const iconFile: Record<string, string> = { "Drowned Aegis": "DrownedÆgis.png" };
+const wikiIcon = (name: string) => `https://nullscape.wiki/wiki/Special:Redirect/file/${encodeURIComponent(iconFile[name] ?? name.replace(/[\s:'’]/g, "") + ".png")}`;
+const iconToken = (name: string) => `[[icon:${name}]]`;
+
+function IconEmojiPicker({ onCopied }: { onCopied: (message: string) => void }) {
+  const [query, setQuery] = useState("");
+  const groups = [{ name: "Classes", items: classIcons }, { name: "Upgrades", items: upgradeIcons }];
+  async function copy(name: string) {
+    const token = iconToken(name);
+    try { await navigator.clipboard.writeText(token); onCopied(`${name} icon copied — paste it into any text field`); }
+    catch { onCopied(`Use this in a text field: ${token}`); }
+  }
+  return <details className="emoji-library" open>
+    <summary><span>✦</span><div><b>Icon library — all classes & upgrades</b><small>Click an icon to copy it, then paste it into any heading, paragraph, callout, step, or summary.</small></div><i>＋</i></summary>
+    <div className="emoji-library-body">
+      <label className="emoji-search"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a class or upgrade…" /></label>
+      {groups.map((group) => {
+        const items = group.items.filter((name) => name.toLowerCase().includes(query.toLowerCase()));
+        return items.length ? <section key={group.name}><h3>{group.name} <small>{items.length}</small></h3><div className="emoji-grid">{items.map((name) => <button type="button" key={name} title={`Copy ${name} emoji`} onClick={() => copy(name)}><img src={wikiIcon(name)} alt="" /><span>{name}</span></button>)}</div></section> : null;
+      })}
+    </div>
+  </details>;
+}
+
 async function readJson(response: Response) {
   const text = await response.text();
   try { return text ? JSON.parse(text) : {}; }
@@ -194,6 +222,7 @@ export default function Editor() {
             <label><span>Quick summary</span><textarea rows={2} value={activeTech.summary} onChange={(e) => replaceTech({ ...activeTech, summary: e.target.value })} /></label>
             <label className="toggle"><input type="checkbox" checked={activeTech.published} onChange={(e) => replaceTech({ ...activeTech, published: e.target.checked })} /><span><b>Published tech</b><small>Turn this off while the page is unfinished.</small></span></label>
           </div>
+          <IconEmojiPicker onCopied={(text) => { setStatus("dirty"); setMessage(text); }} />
           <div className="blocks-heading"><div><small>Page content</small><h2>Blocks</h2></div><div className="add-block-menu"><span>Add:</span>{blockTypes.map((type) => <button key={type} onClick={() => addBlock(type)}>{blockNames[type]}</button>)}</div></div>
           <div className="block-list">{activeTech.blocks.map((block, index) => <div className="block-card" key={block.id}>
             <div className="block-toolbar"><select value={block.type} onChange={(e) => updateBlock(block.id, { type: e.target.value as BlockType })}>{blockTypes.map((type) => <option key={type} value={type}>{blockNames[type]}</option>)}</select><div><button onClick={() => moveBlock(index, -1)} disabled={index === 0}>↑</button><button onClick={() => moveBlock(index, 1)} disabled={index === activeTech.blocks.length - 1}>↓</button><button className="remove" onClick={() => deleteBlock(block.id)}>Delete</button></div></div>
