@@ -12,6 +12,7 @@ function githubHeaders(json = false) {
   return {
     accept: "application/vnd.github+json",
     authorization: `Bearer ${token}`,
+    "user-agent": "nullscape-compendium-editor",
     "x-github-api-version": "2022-11-28",
     ...(json ? { "content-type": "application/json" } : {}),
   };
