@@ -5,9 +5,9 @@
 import { useMemo } from "react";
 import { buildRunQuery, RunDock, useSharedRun } from "./run-dock";
 
-const checkerUrl="https://nullscape-medal-pool.poggieboii78.chatgpt.site";
-const altarUrl="https://nullscape-altar-calculator.poggieboii78.chatgpt.site";
-const shopUrl="https://nullscape-shop-calculator.poggieboii78.chatgpt.site";
+const checkerUrl="/nullscape-tools/medal/";
+const altarUrl="/nullscape-tools/altar/";
+const shopUrl="/nullscape-tools/shop/";
 const medalIcon="https://nullscape.wiki/wiki/Special:Redirect/file/Medal.png";
 const altarIcon="https://nullscape.wiki/wiki/Special:Redirect/file/MoreAltars.png";
 const shopIcon="https://nullscape.wiki/wiki/Special:Redirect/file/BusinessLicense.png";
