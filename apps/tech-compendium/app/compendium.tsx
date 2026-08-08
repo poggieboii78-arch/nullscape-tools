@@ -5,6 +5,7 @@ import type { CompendiumBlock, CompendiumData } from "./types";
 import { starterCompendium } from "./types";
 
 function safeMediaUrl(value: string) {
+  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value)) return value;
   if (value.startsWith("/api/media?key=")) return value;
   try {
     const url = new URL(value);
