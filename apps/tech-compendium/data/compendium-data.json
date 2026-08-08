@@ -10,7 +10,29 @@
       "description": "",
       "accent": "#7770ff",
       "published": true,
-      "techs": []
+      "techs": [
+        {
+          "id": "tech-msl10q68-dtd43",
+          "slug": "diver-bhop",
+          "title": "Diver Bhop",
+          "icon": "",
+          "summary": "",
+          "published": true,
+          "updatedAt": "2026-08-08T23:50:18.752Z",
+          "blocks": [
+            {
+              "id": "block-msl1139f-c2f56",
+              "type": "metronome",
+              "content": "E (10ms) Space",
+              "url": "",
+              "caption": "Practice the sequence in time",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "class-msl0qnur-e8nfe",
