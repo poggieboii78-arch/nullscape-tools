@@ -28,7 +28,17 @@
             {
               "id": "block-msl35khc-ls8te",
               "type": "paragraph",
-              "content": "\n\nPrerequisites:\n2 Hands (Optional)\nA pulse (Optional)",
+              "content": "This tech is really necessary for precise movement and Early game gift collection.\nIt's also really useful for surviving Kolona if you forgot your number!\n\nYou should also do this tech if you get [[icon:Ninja Belt]] as its fundamental for Late game gift collection (but be careful or you're gonna fly off...)\n\nPrerequisites:\n2 Hands (Optional)\nA pulse (Optional)",
+              "url": "",
+              "caption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msl41vp4-d46qc",
+              "type": "callout",
+              "content": "Early game gift collection is going to be much harder without this tech because a simple dive will make you fly over most gifts!",
               "url": "",
               "caption": "",
               "bpm": 90,
@@ -39,8 +49,28 @@
               "id": "block-msl13ubj-d93e5",
               "type": "video",
               "content": "",
+              "url": "https://poggieboii78-arch.github.io/nullscape-tools/compendium/uploads/block-msl13ubj-d93e5.mp4",
+              "caption": "Video of a Diver Bhop",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msl41j7y-xs14y",
+              "type": "callout",
+              "content": "You can also chain this tech!",
               "url": "",
-              "caption": "Put video of diver bhop here lel",
+              "caption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msl40yq2-7oppj",
+              "type": "video",
+              "content": "",
+              "url": "https://poggieboii78-arch.github.io/nullscape-tools/compendium/uploads/block-msl40yq2-7oppj.mp4",
+              "caption": "Chaining Bhops",
               "bpm": 90,
               "countIn": 4,
               "loop": true
@@ -48,7 +78,7 @@
             {
               "id": "block-msl38b43-ewbnv",
               "type": "steps",
-              "content": "Do a dive [[icon:Diver]]\nJump",
+              "content": "Do a dive [[icon:Diver]]\nWait a tiny bit (or don't)\nJump",
               "url": "",
               "caption": "",
               "bpm": 90,
@@ -60,7 +90,7 @@
               "type": "metronome",
               "content": "E (50ms) Space",
               "url": "",
-              "caption": "This Should be roughly the timing for the bhop",
+              "caption": "This Should be roughly the timing for the bhop (Its really not too precise)",
               "bpm": 90,
               "countIn": 0,
               "loop": false
