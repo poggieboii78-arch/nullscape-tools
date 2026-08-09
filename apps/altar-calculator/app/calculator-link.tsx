@@ -8,7 +8,7 @@ import type { SharedRun, StackMap } from "./run-dock";
 type Credentials={room:string;password:string};
 type LinkStatus="off"|"joining"|"waiting"|"connected"|"offline"|"error";
 type SessionCache={version:1;credentials:Credentials;snapshot?:SharedRun};
-type DiscoveryMessage={type:"request";sender:string}|{type:"session";sender:string;target?:string;credentials:Credentials};
+type DiscoveryMessage={type:"request";sender:string}|{type:"session";sender:string;target?:string;credentials:Credentials}|{type:"disconnect";sender:string;credentials:Credentials};
 type YModule=typeof import("yjs");
 type ApplyRun=(run:SharedRun)=>void;
 
@@ -85,7 +85,7 @@ export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;appl
   const runRef=useRef(run);const credentialsRef=useRef<Credentials|null>(null);const rootRef=useRef<Y.Map<unknown>|null>(null);const yRef=useRef<YModule|null>(null);const providerRef=useRef<WebrtcProvider|null>(null);const docRef=useRef<Y.Doc|null>(null);const applyingRemote=useRef(false);const generation=useRef(0);const initializedRef=useRef(false);const peersRef=useRef(0);const discoveryRef=useRef<BroadcastChannel|null>(null);const tabIdRef=useRef("");const autoJoinBlockedRef=useRef(false);
 
   const stopProvider=useCallback(()=>{generation.current++;providerRef.current?.destroy();docRef.current?.destroy();providerRef.current=null;docRef.current=null;rootRef.current=null;yRef.current=null;initializedRef.current=false;peersRef.current=0;setPeers(0);setHasSnapshot(false);},[]);
-  const disconnect=useCallback(()=>{autoJoinBlockedRef.current=true;stopProvider();credentialsRef.current=null;setCredentials(null);setStatus("off");setMessage("");setHasSnapshot(false);clearCache();removeCredentialsFromUrl();onActiveChange?.(false);},[onActiveChange,stopProvider]);
+  const disconnect=useCallback((notifyOtherTabs=true)=>{const current=credentialsRef.current;if(notifyOtherTabs&&current&&discoveryRef.current&&tabIdRef.current)discoveryRef.current.postMessage({type:"disconnect",sender:tabIdRef.current,credentials:current} satisfies DiscoveryMessage);autoJoinBlockedRef.current=true;stopProvider();credentialsRef.current=null;setCredentials(null);setStatus("off");setMessage("");setHasSnapshot(false);clearCache();removeCredentialsFromUrl();onActiveChange?.(false);},[onActiveChange,stopProvider]);
 
   const start=useCallback(async(nextCredentials:Credentials,seed?:SharedRun)=>{
     autoJoinBlockedRef.current=false;stopProvider();const attempt=generation.current;credentialsRef.current=nextCredentials;setCredentials(nextCredentials);setStatus(navigator.onLine?"joining":"offline");setMessage("");putCredentialsInUrl(nextCredentials);onActiveChange?.(true);if(discoveryRef.current&&tabIdRef.current)discoveryRef.current.postMessage({type:"session",sender:tabIdRef.current,credentials:nextCredentials} satisfies DiscoveryMessage);
@@ -112,13 +112,14 @@ export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;appl
     const channel=new BroadcastChannel(discoveryChannelName);discoveryRef.current=channel;
     channel.onmessage=event=>{const data=event.data as Partial<DiscoveryMessage>|null;if(!data||typeof data.sender!=="string"||!/^[A-Za-z0-9_-]{16}$/.test(data.sender)||data.sender===tabIdRef.current)return;
       if(data.type==="request"){const current=credentialsRef.current;if(current)channel.postMessage({type:"session",sender:tabIdRef.current,target:data.sender,credentials:current} satisfies DiscoveryMessage);return;}
+      if(data.type==="disconnect"){const current=credentialsRef.current,candidate=data.credentials;if(!current||!candidate||typeof candidate.room!=="string"||typeof candidate.password!=="string"||!parseCalculatorLink(encodeCalculatorLink(candidate))||!sameCredentials(current,candidate))return;disconnect(false);return;}
       if(data.type!=="session"||(data.target&&data.target!==tabIdRef.current)||autoJoinBlockedRef.current||credentialsRef.current)return;
       const candidate=data.credentials;if(!candidate||typeof candidate.room!=="string"||typeof candidate.password!=="string"||!parseCalculatorLink(encodeCalculatorLink(candidate)))return;
       void start(candidate);
     };
     channel.postMessage({type:"request",sender:tabIdRef.current} satisfies DiscoveryMessage);
     return()=>{if(discoveryRef.current===channel)discoveryRef.current=null;channel.close();};
-  },[start]);
+  },[disconnect,start]);
   useEffect(()=>{const fromUrl=credentialsFromLocation();const cached=readCache();const chosen=fromUrl??cached?.credentials;const timer=chosen?window.setTimeout(()=>{const seed=cached&&sameCredentials(cached.credentials,chosen)?cached.snapshot:undefined;void start(chosen,seed);},0):null;return()=>{if(timer!==null)clearTimeout(timer);stopProvider();};},[start,stopProvider]);
   useEffect(()=>{if(!open)return;const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false);};window.addEventListener("keydown",escape);return()=>window.removeEventListener("keydown",escape);},[open]);
 
@@ -132,7 +133,7 @@ export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;appl
     {open&&<div className="calculator-link-layer" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setOpen(false);}}><section className="calculator-link-dialog" role="dialog" aria-modal="true" aria-labelledby="calculator-link-title">
       <button className="calculator-link-close" onClick={()=>setOpen(false)} aria-label="Close Calculator Link">×</button>
       <small>LIVE RUN SHARING</small><h2 id="calculator-link-title">Calculator Link</h2>
-      {status==="off"?<><p>Create one shared run, then send the invite to your friends. Golden Gifts, level, lobby data, enemies, Curses, and upgrades update for everyone.</p><button className="link-primary" onClick={create}>Create &amp; copy invite</button><div className="link-divider"><span>OR JOIN ONE</span></div><div className="link-join"><input value={joinValue} onChange={event=>setJoinValue(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")join();}} placeholder="Paste invite link or session code" aria-label="Calculator Link invite"/><button onClick={join}>Join</button></div></>:<><div className={`link-status ${status}`}><i/><span><b>{statusText}</b><small>{status==="waiting"&&!hasSnapshot?"Someone with the run needs to open the link.":"Changes sync automatically while this tab is open."}</small></span></div><label className="link-invite"><span>INVITE</span><input readOnly value={credentials?inviteUrl(credentials):""} onFocus={event=>event.currentTarget.select()}/></label><div className="link-session-actions"><button className="link-primary" onClick={copyInvite}>Copy invite</button><button className="link-disconnect" onClick={disconnect}>Disconnect</button></div></>}
+      {status==="off"?<><p>Create one shared run, then send the invite to your friends. Golden Gifts, level, lobby data, enemies, Curses, and upgrades update for everyone.</p><button className="link-primary" onClick={create}>Create &amp; copy invite</button><div className="link-divider"><span>OR JOIN ONE</span></div><div className="link-join"><input value={joinValue} onChange={event=>setJoinValue(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")join();}} placeholder="Paste invite link or session code" aria-label="Calculator Link invite"/><button onClick={join}>Join</button></div></>:<><div className={`link-status ${status}`}><i/><span><b>{statusText}</b><small>{status==="waiting"&&!hasSnapshot?"Someone with the run needs to open the link.":"Changes sync automatically while this tab is open."}</small></span></div><label className="link-invite"><span>INVITE</span><input readOnly value={credentials?inviteUrl(credentials):""} onFocus={event=>event.currentTarget.select()}/></label><div className="link-session-actions"><button className="link-primary" onClick={copyInvite}>Copy invite</button><button className="link-disconnect" onClick={()=>disconnect()}>Disconnect</button></div></>}
       {message&&<p className="link-message" role="status">{message}</p>}
       <footer><b>Built-in failsafes</b><span>Different fields merge · reconnects after brief dropouts · invite data is encrypted · device history and sorting stay private.</span><em>Everyone with the invite can edit. If two people change the same value together, the session resolves it consistently.</em></footer>
     </section></div>}
