@@ -4,18 +4,17 @@ import test from "node:test";
 const developmentPreviewMeta =
   /<meta(?=[^>]*\bname=["']codex-preview["'])(?=[^>]*\bcontent=["']development["'])[^>]*>/i;
 
-async function fetchWorker({ email, allowedEmails, allowedEmail } = {}) {
+async function fetchWorker({ email, allowedEmails, allowedEmail, path = "/", init = {} } = {}) {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}`);
   const { default: worker } = await import(workerUrl.href);
 
+  const headers = new Headers(init.headers);
+  headers.set("accept", headers.get("accept") ?? "text/html");
+  if (email) headers.set("cf-access-authenticated-user-email", email);
+
   return worker.fetch(
-    new Request("http://localhost/", {
-      headers: {
-        accept: "text/html",
-        ...(email ? { "cf-access-authenticated-user-email": email } : {}),
-      },
-    }),
+    new Request(`http://localhost${path}`, { ...init, headers }),
     {
       ALLOWED_EMAILS: allowedEmails,
       ALLOWED_EMAIL: allowedEmail,
@@ -29,6 +28,22 @@ async function fetchWorker({ email, allowedEmails, allowedEmail } = {}) {
     },
   );
 }
+
+test("allows video-sized multipart requests to reach the media route", async () => {
+  const form = new FormData();
+  form.set("video", new File([new Uint8Array(2 * 1024 * 1024)], "clip.mp4", { type: "video/mp4" }));
+  form.set("blockId", "test-video");
+
+  const response = await fetchWorker({
+    email: "owner@example.com",
+    allowedEmails: "owner@example.com",
+    path: "/api/media",
+    init: { method: "POST", body: form },
+  });
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "The GitHub publishing secret is not configured." });
+});
 
 test("renders development preview metadata for an allowed editor", async () => {
   const response = await fetchWorker({
