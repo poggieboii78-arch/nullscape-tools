@@ -83,6 +83,7 @@ export default function Editor() {
   const [connected, setConnected] = useState(false);
   const [classPanel, setClassPanel] = useState(true);
   const [uploading, setUploading] = useState<"class" | "tech" | "">("");
+  const [uploadingVideo, setUploadingVideo] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [version, setVersion] = useState("");
 
@@ -188,6 +189,25 @@ export default function Editor() {
     finally { setUploading(""); }
   }
 
+  async function uploadVideo(file: File, block: CompendiumBlock) {
+    if (!["video/mp4", "video/webm", "video/ogg"].includes(file.type)) { setStatus("error"); setMessage("Choose an MP4, WebM, or Ogg video."); return; }
+    if (file.size > 15 * 1024 * 1024) { setStatus("error"); setMessage("Videos must be 15 MB or smaller. Use YouTube for longer clips."); return; }
+    setUploadingVideo(block.id); setMessage("Uploading video…");
+    try {
+      const form = new FormData();
+      form.set("video", file);
+      form.set("blockId", block.id);
+      const response = await fetch("/api/media", { method: "POST", body: form });
+      const payload = await readJson(response);
+      if (!response.ok) throw new Error(payload.error || `Video upload failed (${response.status}).`);
+      updateBlock(block.id, { url: payload.url });
+      setMessage("Video uploaded — publish the tech when ready");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error instanceof Error ? error.message : "Couldn’t upload that video.");
+    } finally { setUploadingVideo(""); }
+  }
+
   const iconPreview = (value: string | undefined, fallback: string) => value?.startsWith("/") || value?.startsWith("https://") || value?.startsWith("data:image/") ? <img src={value} alt="" /> : <>{value || fallback}</>;
 
   async function save() {
@@ -246,7 +266,8 @@ export default function Editor() {
           <div className="block-list">{activeTech.blocks.map((block, index) => <div className="block-card" key={block.id}>
             <div className="block-toolbar"><select value={block.type} onChange={(e) => updateBlock(block.id, { type: e.target.value as BlockType })}>{blockTypes.map((type) => <option key={type} value={type}>{blockNames[type]}</option>)}</select><div><button onClick={() => moveBlock(index, -1)} disabled={index === 0}>↑</button><button onClick={() => moveBlock(index, 1)} disabled={index === activeTech.blocks.length - 1}>↓</button><button className="remove" onClick={() => deleteBlock(block.id)}>Delete</button></div></div>
             {(block.type === "heading" || block.type === "paragraph" || block.type === "steps" || block.type === "callout") && <label><span>{block.type === "steps" ? "One step per line" : blockNames[block.type]}</span><textarea rows={block.type === "paragraph" || block.type === "steps" ? 5 : 3} value={block.content} onChange={(e) => updateBlock(block.id, { content: e.target.value })} /></label>}
-            {(block.type === "video" || block.type === "image") && <><label><span>{block.type === "video" ? "YouTube or direct video URL" : "Image URL"}</span><input type="url" value={block.url} placeholder="https://…" onChange={(e) => updateBlock(block.id, { url: e.target.value })} /></label><label><span>Caption / description</span><input value={block.caption} onChange={(e) => updateBlock(block.id, { caption: e.target.value })} /></label></>}
+            {block.type === "image" && <><label><span>Image URL</span><input type="url" value={block.url} placeholder="https://…" onChange={(e) => updateBlock(block.id, { url: e.target.value })} /></label><label><span>Caption / description</span><input value={block.caption} onChange={(e) => updateBlock(block.id, { caption: e.target.value })} /></label></>}
+            {block.type === "video" && <><label><span>YouTube or direct video URL</span><input type="url" value={block.url} placeholder="https://…" onChange={(e) => updateBlock(block.id, { url: e.target.value })} /></label><div className="video-upload-row"><label className={`upload-button ${uploadingVideo === block.id ? "uploading" : ""}`}><input type="file" accept="video/mp4,video/webm,video/ogg" disabled={uploadingVideo === block.id} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadVideo(file, block); e.target.value = ""; }} />{uploadingVideo === block.id ? "Uploading…" : "Upload video file"}</label><small>MP4, WebM, or Ogg · up to 15 MB. YouTube is still best for longer videos.</small></div><label><span>Caption / description</span><input value={block.caption} onChange={(e) => updateBlock(block.id, { caption: e.target.value })} /></label></>}
             {block.type === "metronome" && <div className="metronome-fields">
               <label className={hasMillisecondDelay(block.content) ? "timing-disabled" : ""}><span>BPM</span><input type="number" min="20" max="300" disabled={hasMillisecondDelay(block.content)} value={block.bpm ?? 90} onChange={(e) => updateBlock(block.id, { bpm: Math.max(20, Math.min(300, Number(e.target.value) || 90)) })} /><small>{hasMillisecondDelay(block.content) ? "Ignored — explicit ms timing is active." : "Used when no ms delay is present."}</small></label>
               <label><span>Start countdown</span><select value={block.countIn ?? 4} onChange={(e) => updateBlock(block.id, { countIn: Number(e.target.value) })}><option value="0">Disabled</option><option value="2">2 beats</option><option value="4">4 beats</option><option value="8">8 beats</option></select></label>
