@@ -70,11 +70,13 @@ h1 span { color: var(--muted); }
 .lede { max-width: 570px; margin: 22px 0 0; color: var(--muted); font-size: 16px; line-height: 1.65; }
 
 .tools { margin-top: 58px; }
+.resources { margin-top: 42px; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; margin-bottom: 15px; }
 .section-heading .eyebrow { margin-bottom: 8px; }
 h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
 .section-heading > span { color: #796d84; font: 700 10px/1 Arial, sans-serif; letter-spacing: .14em; }
 .tool-list { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.resource-list { display: grid; }
 .tool-card {
   min-height: 145px;
   padding: 20px;
@@ -103,6 +105,11 @@ h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
 .launch { grid-column: 2; position: relative; z-index: 1; color: #cbb8dd; font: 800 10px/1 Arial, sans-serif; letter-spacing: .13em; white-space: nowrap; }
 .launch b { margin-left: 8px; color: var(--purple); font-size: 17px; }
 .altar-card::after { background: radial-gradient(circle at 8% 50%, rgba(80,138,255,.14), transparent 32%); }
+.resource-card { grid-template-columns: 80px minmax(0,1fr) auto; min-height: 132px; }
+.resource-card::after { background: radial-gradient(circle at 8% 50%, rgba(95,220,255,.12), transparent 34%); }
+.resource-card .tool-icon { color: #8eeeff; font-size: 34px; border-color: #365d70; background: #0b141b; }
+.resource-card .tool-kicker { color: #76dff2; }
+.resource-card .launch { grid-column: 3; grid-row: 1; align-self: center; }
 
 footer {
   min-height: 54px;
@@ -141,10 +148,12 @@ footer span:first-child { font-weight: 800; letter-spacing: .14em; }
   .shell { width: min(100% - 28px, 1050px); padding: 46px 0 40px; }
   .tools { margin-top: 44px; }
   .tool-list { grid-template-columns: 1fr; }
+  .resource-card { grid-template-columns: 70px 1fr; }
   .tool-card { grid-template-columns: 70px 1fr; gap: 16px; padding: 18px; }
   .tool-icon { width: 70px; height: 70px; }
   .tool-icon img { width: 50px; height: 50px; }
   .launch { grid-column: 2; }
+  .resource-card .launch { grid-column: 2; grid-row: auto; justify-self: start; }
   footer { flex-direction: column; }
   .dock-run-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dock-chip-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.run-dock.open{height:min(72vh,560px)}.dock-top>div:first-child span{display:none}.dock-actions button{padding:6px 8px}
 }

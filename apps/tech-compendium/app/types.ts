@@ -15,6 +15,7 @@ export type CompendiumBlock = {
 
 export type CompendiumTech = {
   id: string;
+  kind?: "tech";
   slug: string;
   title: string;
   icon: string;
@@ -24,6 +25,14 @@ export type CompendiumTech = {
   blocks: CompendiumBlock[];
 };
 
+export type CompendiumTechSeparator = {
+  id: string;
+  kind: "separator";
+  title: string;
+};
+
+export type CompendiumTechItem = CompendiumTech | CompendiumTechSeparator;
+
 export type CompendiumClass = {
   id: string;
   slug: string;
@@ -32,7 +41,7 @@ export type CompendiumClass = {
   description: string;
   accent: string;
   published: boolean;
-  techs: CompendiumTech[];
+  techs: CompendiumTechItem[];
 };
 
 export type CompendiumData = {
@@ -104,3 +113,7 @@ const fallbackCompendium: CompendiumData = {
 export const starterCompendium: CompendiumData = Array.isArray(source.classes)
   ? source as unknown as CompendiumData
   : fallbackCompendium;
+
+export function isCompendiumTech(item: CompendiumTechItem): item is CompendiumTech {
+  return item.kind !== "separator";
+}
