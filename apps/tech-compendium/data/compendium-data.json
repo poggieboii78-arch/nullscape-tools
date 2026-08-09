@@ -224,17 +224,17 @@
         },
         {
           "id": "tech-mslr7k87-kye6s",
-          "slug": "some-tech-idk",
-          "title": "Some tech idk",
+          "slug": "infinite-double-jump",
+          "title": "Infinite Double Jump",
           "icon": "",
-          "summary": "Infinite Double Jumps!",
+          "summary": "Self Explanitory",
           "published": true,
           "updatedAt": "2026-08-09T12:03:27.655Z",
           "blocks": [
             {
               "id": "block-msltfl8v-xdks4",
               "type": "callout",
-              "content": "This is a Late Game (LVL 20+) Tech, You will need [[icon:Miniature Hourglass]] for this.\n",
+              "content": "This is a Late Game (LVL 20+) Tech, You will need [[icon:Miniature Hourglass]] and [[icon:Double Jump]] for this.\n\nThis tech can be used to save yourself from falling into the void, or just in general go anywhere you want while having a bunch of i-frames\n",
               "url": "",
               "caption": "",
               "secondaryUrl": "",
@@ -268,7 +268,7 @@
           ]
         }
       ],
-      "updatedAt": "2026-08-09T13:06:18.090Z"
+      "updatedAt": "2026-08-09T21:20:19.796Z"
     },
     {
       "id": "class-msl0qzqz-wfdmj",
