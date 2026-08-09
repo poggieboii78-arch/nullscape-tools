@@ -58,7 +58,7 @@
             {
               "id": "block-msl1139f-c2f56",
               "type": "metronome",
-              "content": "E (10ms) Space",
+              "content": "E (50ms) Space",
               "url": "",
               "caption": "This Should be roughly the timing for the bhop",
               "bpm": 90,
