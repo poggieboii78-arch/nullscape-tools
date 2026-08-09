@@ -3,8 +3,8 @@ export type CompendiumBlock = { id: string; type: BlockType; content: string; ur
 export type CompendiumTech = { id: string; kind?: "tech"; slug: string; title: string; icon: string; summary: string; published: boolean; updatedAt: string; blocks: CompendiumBlock[] };
 export type CompendiumTechSeparator = { id: string; kind: "separator"; title: string };
 export type CompendiumTechItem = CompendiumTech | CompendiumTechSeparator;
-export type CompendiumClass = { id: string; slug: string; name: string; icon: string; description: string; accent: string; published: boolean; techs: CompendiumTechItem[] };
-export type CompendiumData = { title: string; subtitle: string; classes: CompendiumClass[] };
+export type CompendiumClass = { id: string; slug: string; name: string; icon: string; description: string; accent: string; published: boolean; updatedAt?: string; techs: CompendiumTechItem[] };
+export type CompendiumData = { title: string; subtitle: string; classes: CompendiumClass[]; deletedClassIds?: string[]; classOrderUpdatedAt?: string };
 
 export function isCompendiumTech(item: CompendiumTechItem): item is CompendiumTech {
   return item.kind !== "separator";

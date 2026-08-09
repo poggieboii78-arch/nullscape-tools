@@ -4,7 +4,9 @@
 
 Protect the entire Worker with Cloudflare Access, then configure `ALLOWED_EMAILS` as a comma-separated list of the emails permitted by the Access policy (for example, `owner@example.com,friend@example.com`). The legacy `ALLOWED_EMAIL` variable is also accepted during migration. Add `GITHUB_TOKEN` with `wrangler secret put GITHUB_TOKEN`; use a fine-grained token with **Contents: Read and write** access to `poggieboii78-arch/nullscape-tools` only. Never commit the token.
 
-Publishing updates `apps/tech-compendium/data/compendium-data.json` on `main`, which triggers the GitHub Pages rebuild. The API sends the current Git blob SHA so stale editor tabs cannot overwrite a newer publication.
+Publishing updates `apps/tech-compendium/data/compendium-data.json` on `main`, which triggers the GitHub Pages rebuild. Editors publish only the classes changed in their browser. The API merges those class updates into the latest GitHub file, preserves classes missing from a local copy, retries concurrent Git conflicts, and treats the newest received update as the winner when two people publish the same class.
+
+Removing a class locally never deletes shared content. A published class can only be removed with the explicit **Delete from shared Compendium** action and its confirmation. Deleted class IDs are retained as tombstones so an old browser draft cannot accidentally resurrect them.
 
 Video blocks accept YouTube/direct URLs or MP4, WebM, and Ogg uploads up to 15 MB. Uploaded clips are committed to `apps/tech-compendium/public/uploads/` and the editor stores their GitHub Pages URL in the block. Re-uploading the same format for a block replaces its existing file.
 

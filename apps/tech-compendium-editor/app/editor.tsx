@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { mergeClasses } from "./class-merge.mjs";
 import type { BlockType, CompendiumBlock, CompendiumClass, CompendiumData, CompendiumTech, CompendiumTechItem, CompendiumTechSeparator } from "./types";
 import { isCompendiumTech, starterCompendium } from "./types";
 
@@ -8,7 +9,8 @@ const blockNames: Record<BlockType, string> = { heading: "Heading", paragraph: "
 const blockTypes = Object.keys(blockNames) as BlockType[];
 const makeId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "untitled";
-const draftKey = "nullscape-compendium-editor-draft-v1";
+const draftKey = "nullscape-compendium-editor-draft-v2";
+const legacyDraftKey = "nullscape-compendium-editor-draft-v1";
 const firstTechId = (items: CompendiumTechItem[] | undefined) => items?.find(isCompendiumTech)?.id ?? "";
 const techCount = (items: CompendiumTechItem[]) => items.filter(isCompendiumTech).length;
 const hasMillisecondDelay = (value: string) => /\(?\s*\d+(?:\.\d+)?\s*ms(?:\s+delay)?\s*\)?/i.test(value);
@@ -74,8 +76,62 @@ function move<T>(items: T[], from: number, to: number) {
   const next = [...items]; const [item] = next.splice(from, 1); next.splice(to, 0, item); return next;
 }
 
+type ClassPatch = { format: 2; classes: CompendiumClass[]; classOrder?: string[] };
+
+function comparableClass(item: CompendiumClass) {
+  const content = { ...item };
+  delete content.updatedAt;
+  return content;
+}
+
+function buildPatch(data: CompendiumData, baseline: CompendiumData): ClassPatch {
+  const baselineById = new Map(baseline.classes.map((item) => [item.id, item]));
+  const classes = data.classes.filter((item) => {
+    const shared = baselineById.get(item.id);
+    return !shared || JSON.stringify(comparableClass(item)) !== JSON.stringify(comparableClass(shared));
+  });
+  const order = data.classes.map((item) => item.id);
+  const baselineOrder = baseline.classes.map((item) => item.id);
+  return {
+    format: 2,
+    classes,
+    ...(JSON.stringify(order) !== JSON.stringify(baselineOrder) ? { classOrder: order } : {}),
+  };
+}
+
+function hasPatch(patch: ClassPatch) {
+  return patch.classes.length > 0 || Boolean(patch.classOrder);
+}
+
+function applyPatch(baseline: CompendiumData, patch: ClassPatch): CompendiumData {
+  const deletedClassIds = baseline.deletedClassIds ?? [];
+  return {
+    ...baseline,
+    classes: mergeClasses(baseline.classes, patch.classes, patch.classOrder, deletedClassIds),
+  };
+}
+
+function readDraft(): ClassPatch | null {
+  const current = localStorage.getItem(draftKey);
+  if (current) {
+    const parsed = JSON.parse(current) as ClassPatch;
+    if (parsed?.format === 2 && Array.isArray(parsed.classes)) return parsed;
+  }
+  const legacy = localStorage.getItem(legacyDraftKey);
+  if (!legacy) return null;
+  const parsed = JSON.parse(legacy) as CompendiumData;
+  if (!Array.isArray(parsed?.classes)) return null;
+  return { format: 2, classes: parsed.classes };
+}
+
+function clearDraft() {
+  localStorage.removeItem(draftKey);
+  localStorage.removeItem(legacyDraftKey);
+}
+
 export default function Editor() {
   const [data, setData] = useState<CompendiumData>(starterCompendium);
+  const [baseline, setBaseline] = useState<CompendiumData>(starterCompendium);
   const [classId, setClassId] = useState(starterCompendium.classes[0]?.id ?? "");
   const [techId, setTechId] = useState(firstTechId(starterCompendium.classes[0]?.techs));
   const [status, setStatus] = useState<"loading" | "saved" | "dirty" | "saving" | "error">("loading");
@@ -85,56 +141,65 @@ export default function Editor() {
   const [uploading, setUploading] = useState<"class" | "tech" | "">("");
   const [uploadingVideo, setUploadingVideo] = useState("");
   const [loaded, setLoaded] = useState(false);
-  const [version, setVersion] = useState("");
 
   useEffect(() => {
     fetch("/api/editor", { cache: "no-store" }).then(readJson).then((payload) => {
-      let next = payload.data as CompendiumData;
+      const shared = payload.data as CompendiumData;
+      let next = shared;
       let recovered = false;
       try {
-        const stored = localStorage.getItem(draftKey);
-        if (stored) { next = JSON.parse(stored) as CompendiumData; recovered = true; }
-      } catch { localStorage.removeItem(draftKey); }
-      setData(next); setConnected(Boolean(payload.connected)); setVersion(payload.version ?? "");
+        const stored = readDraft();
+        if (stored) { next = applyPatch(shared, stored); recovered = hasPatch(buildPatch(next, shared)); }
+      } catch { clearDraft(); }
+      setBaseline(shared); setData(next); setConnected(Boolean(payload.connected));
       setClassId(next.classes[0]?.id ?? ""); setTechId(firstTechId(next.classes[0]?.techs));
       setStatus(recovered ? "dirty" : payload.connected ? "saved" : "error");
       setMessage(recovered ? "Recovered your autosaved draft" : payload.connected ? "Everything is saved" : "Publishing connection unavailable");
       setLoaded(true);
     }).catch(() => {
       try {
-        const stored = localStorage.getItem(draftKey);
+        const stored = readDraft();
         if (stored) {
-          const next = JSON.parse(stored) as CompendiumData;
+          const next = applyPatch(starterCompendium, stored);
+          setBaseline(starterCompendium);
           setData(next); setClassId(next.classes[0]?.id ?? ""); setTechId(firstTechId(next.classes[0]?.techs));
           setStatus("dirty"); setMessage("Recovered your autosaved draft"); setLoaded(true); return;
         }
-      } catch { localStorage.removeItem(draftKey); }
+      } catch { clearDraft(); }
       setStatus("error"); setMessage("Couldn’t load the compendium"); setLoaded(true);
     });
   }, []);
 
   useEffect(() => {
-    if (!loaded || status === "saved" || status === "loading") return;
+    if (!loaded || status === "loading" || status === "saving") return;
+    const patch = buildPatch(data, baseline);
+    if (!hasPatch(patch)) { clearDraft(); return; }
     const timer = window.setTimeout(() => {
-      try { localStorage.setItem(draftKey, JSON.stringify(data)); }
+      try { localStorage.setItem(draftKey, JSON.stringify(patch)); localStorage.removeItem(legacyDraftKey); }
       catch { setMessage("Draft changed, but this browser could not autosave it"); }
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [data, loaded, status]);
+  }, [baseline, data, loaded, status]);
+
+  const pendingPatch = useMemo(() => buildPatch(data, baseline), [data, baseline]);
+  const hasPendingChanges = hasPatch(pendingPatch);
 
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (status === "dirty" || status === "error") event.preventDefault();
+      if (hasPendingChanges) event.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [status]);
+  }, [hasPendingChanges]);
 
   const activeClass = useMemo(() => data.classes.find((item) => item.id === classId), [data, classId]);
   const activeItem = activeClass?.techs.find((item) => item.id === techId);
   const activeTech = activeItem && isCompendiumTech(activeItem) ? activeItem : undefined;
   const activeSeparator = activeItem?.kind === "separator" ? activeItem : undefined;
-  const dirty = (next: CompendiumData) => { setData(next); setStatus("dirty"); setMessage("Unsaved changes"); };
+  const dirty = (next: CompendiumData) => {
+    const changed = hasPatch(buildPatch(next, baseline));
+    setData(next); setStatus(changed ? "dirty" : "saved"); setMessage(changed ? "Unsaved class changes" : "Everything is saved");
+  };
   const replaceClass = (nextClass: CompendiumClass) => dirty({ ...data, classes: data.classes.map((item) => item.id === nextClass.id ? nextClass : item) });
   const replaceTech = (nextTech: CompendiumTech) => activeClass && replaceClass({ ...activeClass, techs: activeClass.techs.map((item) => item.id === nextTech.id ? nextTech : item) });
   const replaceSeparator = (nextSeparator: CompendiumTechSeparator) => activeClass && replaceClass({ ...activeClass, techs: activeClass.techs.map((item) => item.id === nextSeparator.id ? nextSeparator : item) });
@@ -146,9 +211,36 @@ export default function Editor() {
     const item: CompendiumClass = { id: makeId("class"), slug: "new-class", name: "New class", icon: "✦", description: "", accent: "#7770ff", published: true, techs: [] };
     dirty({ ...data, classes: [...data.classes, item] }); setClassId(item.id); setTechId(""); setClassPanel(true);
   }
-  function deleteClass() {
-    if (!activeClass || !confirm(`Delete ${activeClass.name} and all of its techs?`)) return;
-    const classes = data.classes.filter((item) => item.id !== activeClass.id); dirty({ ...data, classes }); setClassId(classes[0]?.id ?? ""); setTechId(firstTechId(classes[0]?.techs));
+  async function deleteClass() {
+    if (!activeClass) return;
+    const deleting = activeClass;
+    const isShared = baseline.classes.some((item) => item.id === deleting.id);
+    if (!isShared) {
+      if (!confirm(`Discard the local ${deleting.name} class and all of its techs?`)) return;
+      const classes = data.classes.filter((item) => item.id !== deleting.id);
+      dirty({ ...data, classes }); setClassId(classes[0]?.id ?? ""); setTechId(firstTechId(classes[0]?.techs));
+      return;
+    }
+    if (!confirm(`Permanently delete ${deleting.name} from the shared public Compendium for everyone?\n\nMissing local classes are never deleted automatically. This explicit action is permanent.`)) return;
+    const unsaved = buildPatch(data, baseline);
+    const remaining: ClassPatch = {
+      format: 2,
+      classes: unsaved.classes.filter((item) => item.id !== deleting.id),
+      ...(unsaved.classOrder ? { classOrder: unsaved.classOrder.filter((id) => id !== deleting.id) } : {}),
+    };
+    setStatus("saving"); setMessage(`Deleting ${deleting.name} from the shared Compendium…`);
+    try {
+      const response = await fetch("/api/editor", { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ classId: deleting.id }) });
+      const payload = await readJson(response); if (!response.ok) throw new Error(payload.error || `Deleting failed (${response.status}).`);
+      const shared = payload.data as CompendiumData;
+      const next = applyPatch(shared, remaining);
+      setBaseline(shared); setData(next); clearDraft(); setConnected(true);
+      const stillDirty = hasPatch(buildPatch(next, shared));
+      setStatus(stillDirty ? "dirty" : "saved"); setMessage(stillDirty ? `${deleting.name} deleted — your other class changes are still unsaved` : `${deleting.name} deleted from the shared Compendium`);
+      setClassId(next.classes[0]?.id ?? ""); setTechId(firstTechId(next.classes[0]?.techs));
+    } catch (error) {
+      setStatus("error"); setMessage(`${error instanceof Error ? error.message : "Delete failed."} Your draft is safe on this device.`);
+    }
   }
   function addTech() {
     if (!activeClass) return;
@@ -189,42 +281,45 @@ export default function Editor() {
     finally { setUploading(""); }
   }
 
-  async function uploadVideo(file: File, block: CompendiumBlock, side: "single" | "left" | "right" = "single") {
-    if (!["video/mp4", "video/webm", "video/ogg"].includes(file.type)) { setStatus("error"); setMessage("Choose an MP4, WebM, or Ogg video."); return; }
-    if (file.size > 15 * 1024 * 1024) { setStatus("error"); setMessage("Videos must be 15 MB or smaller. Use YouTube for longer clips."); return; }
+  async function uploadMedia(file: File, block: CompendiumBlock, side: "single" | "left" | "right" = "single") {
+    if (!["video/mp4", "video/webm", "video/ogg", "image/gif"].includes(file.type)) { setStatus("error"); setMessage("Choose an MP4, WebM, Ogg, or GIF file."); return; }
+    if (file.size > 15 * 1024 * 1024) { setStatus("error"); setMessage("Videos and GIFs must be 15 MB or smaller. Use YouTube for longer clips."); return; }
     const uploadId = side === "single" ? block.id : `${block.id}-${side}`;
-    setUploadingVideo(uploadId); setMessage("Uploading video…");
+    setUploadingVideo(uploadId); setMessage(file.type === "image/gif" ? "Uploading GIF…" : "Uploading video…");
     try {
       const form = new FormData();
       form.set("video", file);
       form.set("blockId", uploadId);
       const response = await fetch("/api/media", { method: "POST", body: form });
       const payload = await readJson(response);
-      if (!response.ok) throw new Error(payload.error || `Video upload failed (${response.status}).`);
+      if (!response.ok) throw new Error(payload.error || `Media upload failed (${response.status}).`);
       updateBlock(block.id, side === "right" ? { secondaryUrl: payload.url } : { url: payload.url });
-      setMessage("Video uploaded — publish the tech when ready");
+      setMessage(`${file.type === "image/gif" ? "GIF" : "Video"} uploaded — publish the tech when ready`);
     } catch (error) {
       setStatus("error");
-      setMessage(error instanceof Error ? error.message : "Couldn’t upload that video.");
+      setMessage(error instanceof Error ? error.message : "Couldn’t upload that video or GIF.");
     } finally { setUploadingVideo(""); }
   }
 
   const iconPreview = (value: string | undefined, fallback: string) => value?.startsWith("/") || value?.startsWith("https://") || value?.startsWith("data:image/") ? <img src={value} alt="" /> : <>{value || fallback}</>;
 
   async function save() {
+    const patch = buildPatch(data, baseline);
+    if (!hasPatch(patch)) { setStatus("saved"); setMessage("Everything is saved"); return; }
     setStatus("saving"); setMessage("Publishing changes…");
     try {
-      const response = await fetch("/api/editor", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ data, version }) });
+      const response = await fetch("/api/editor", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ classes: patch.classes, classOrder: patch.classOrder }) });
       const payload = await readJson(response); if (!response.ok) throw new Error(payload.error || `Publishing failed (${response.status}). Please try again.`);
-      setData(payload.data ?? data); setVersion(payload.version ?? version); localStorage.removeItem(draftKey); setStatus("saved"); setMessage("Published to the compendium"); setConnected(true);
-    } catch (error) { try { localStorage.setItem(draftKey, JSON.stringify(data)); } catch {} setStatus("error"); setMessage(`${error instanceof Error ? error.message : "Save failed."} Your draft is safe on this device.`); }
+      const shared = payload.data as CompendiumData;
+      setBaseline(shared); setData(shared); clearDraft(); setStatus("saved"); setMessage(patch.classes.length === 1 ? `${patch.classes[0].name} published and merged` : "Class changes published and merged"); setConnected(true);
+    } catch (error) { try { localStorage.setItem(draftKey, JSON.stringify(patch)); } catch {} setStatus("error"); setMessage(`${error instanceof Error ? error.message : "Save failed."} Your draft is safe on this device.`); }
   }
 
   return <main className="editor-shell">
     <header className="editor-topbar">
       <div className="editor-brand"><span>N</span><div><b>Compendium Editor</b><small>Private workspace</small></div></div>
       <div className={`save-state ${status}`}><i />{message}</div>
-      <button className="publish-button" onClick={save} disabled={status === "saving" || status === "loading"}>{status === "saving" ? "Publishing…" : "Publish changes"}</button>
+      <button className="publish-button" onClick={save} disabled={status === "saving" || status === "loading" || !hasPendingChanges}>{status === "saving" ? "Publishing…" : "Publish class changes"}</button>
     </header>
 
     <div className="editor-grid">
@@ -243,7 +338,7 @@ export default function Editor() {
 
       <section className="edit-canvas">
         {!activeClass ? <div className="editor-empty"><span>✦</span><h1>Create your first class</h1><p>Classes become the tabs across the top of the compendium.</p><button onClick={addClass}>Add class</button></div> : classPanel ? <div className="form-page">
-          <div className="page-heading"><div><small>Class tab</small><h1>{activeClass.name}</h1><p>Controls the top tab and the tech list shown underneath it.</p></div><button className="danger-link" onClick={deleteClass}>Delete class</button></div>
+          <div className="page-heading"><div><small>Class tab</small><h1>{activeClass.name}</h1><p>Controls the top tab and the tech list shown underneath it.</p></div><button className="danger-link" onClick={deleteClass}>{baseline.classes.some((item) => item.id === activeClass.id) ? "Delete from shared Compendium" : "Discard local class"}</button></div>
           <div className="form-card class-form-grid">
             <label><span>Class name</span><input value={activeClass.name} onChange={(e) => replaceClass({ ...activeClass, name: e.target.value, slug: slugify(e.target.value) })} /></label>
             <div className="icon-editor"><span className="field-title">Class icon</span><div className="icon-editor-row"><span className="icon-preview" style={{ background: activeClass.accent }}>{iconPreview(activeClass.icon, "✦")}</span><div><label className="upload-button"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(e) => e.target.files?.[0] && uploadIcon(e.target.files[0], "class")} />{uploading === "class" ? "Uploading…" : "Upload image"}</label><button type="button" className="clear-icon" onClick={() => replaceClass({ ...activeClass, icon: "✦" })}>Use default</button></div></div><input value={activeClass.icon} placeholder="Or paste an HTTPS image URL / emoji" onChange={(e) => replaceClass({ ...activeClass, icon: e.target.value })} /></div>
@@ -262,13 +357,13 @@ export default function Editor() {
             <label><span>Quick summary</span><textarea rows={2} value={activeTech.summary} onChange={(e) => replaceTech({ ...activeTech, summary: e.target.value })} /></label>
             <label className="toggle"><input type="checkbox" checked={activeTech.published} onChange={(e) => replaceTech({ ...activeTech, published: e.target.checked })} /><span><b>Published tech</b><small>Turn this off while the page is unfinished.</small></span></label>
           </div>
-          <IconEmojiPicker onCopied={(text) => { setStatus("dirty"); setMessage(text); }} />
+          <IconEmojiPicker onCopied={(text) => setMessage(text)} />
           <div className="blocks-heading"><div><small>Page content</small><h2>Blocks</h2></div><div className="add-block-menu"><span>Add:</span>{blockTypes.map((type) => <button key={type} onClick={() => addBlock(type)}>{blockNames[type]}</button>)}</div></div>
           <div className="block-list">{activeTech.blocks.map((block, index) => <div className="block-card" key={block.id}>
             <div className="block-toolbar"><select value={block.type} onChange={(e) => updateBlock(block.id, { type: e.target.value as BlockType })}>{blockTypes.map((type) => <option key={type} value={type}>{blockNames[type]}</option>)}</select><div><button onClick={() => moveBlock(index, -1)} disabled={index === 0}>↑</button><button onClick={() => moveBlock(index, 1)} disabled={index === activeTech.blocks.length - 1}>↓</button><button className="remove" onClick={() => deleteBlock(block.id)}>Delete</button></div></div>
-            {(block.type === "heading" || block.type === "paragraph" || block.type === "steps" || block.type === "callout") && <label><span>{block.type === "steps" ? "One step per line" : blockNames[block.type]}</span><textarea rows={block.type === "paragraph" || block.type === "steps" ? 5 : 3} value={block.content} onChange={(e) => updateBlock(block.id, { content: e.target.value })} /></label>}
+            {(block.type === "heading" || block.type === "paragraph" || block.type === "steps" || block.type === "callout") && <label><span>{block.type === "steps" ? "One step per line · use --- to skip a number" : blockNames[block.type]}</span><textarea rows={block.type === "paragraph" || block.type === "steps" ? 5 : 3} value={block.content} onChange={(e) => updateBlock(block.id, { content: e.target.value })} />{block.type === "paragraph" && <small className="format-help">Embed a link with <code>[link text](https://example.com)</code>. Bare HTTPS links become clickable too.</small>}</label>}
             {block.type === "image" && <><label><span>Image URL</span><input type="url" value={block.url} placeholder="https://…" onChange={(e) => updateBlock(block.id, { url: e.target.value })} /></label><label><span>Caption / description</span><input value={block.caption} onChange={(e) => updateBlock(block.id, { caption: e.target.value })} /></label></>}
-            {block.type === "video" && <><label><span>YouTube or direct video URL</span><input type="url" value={block.url} placeholder="https://…" onChange={(e) => updateBlock(block.id, { url: e.target.value })} /></label><div className="video-upload-row"><label className={`upload-button ${uploadingVideo === block.id ? "uploading" : ""}`}><input type="file" accept="video/mp4,video/webm,video/ogg" disabled={uploadingVideo === block.id} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadVideo(file, block); e.target.value = ""; }} />{uploadingVideo === block.id ? "Uploading…" : "Upload video file"}</label><small>MP4, WebM, or Ogg · up to 15 MB. YouTube is still best for longer videos.</small></div><label><span>Caption / description</span><input value={block.caption} onChange={(e) => updateBlock(block.id, { caption: e.target.value })} /></label></>}
+            {block.type === "video" && <><label><span>YouTube, direct video, or direct GIF URL</span><input type="url" value={block.url} placeholder="https://…" onChange={(e) => updateBlock(block.id, { url: e.target.value })} /></label><div className="video-upload-row"><label className={`upload-button ${uploadingVideo === block.id ? "uploading" : ""}`}><input type="file" accept="video/mp4,video/webm,video/ogg,image/gif" disabled={uploadingVideo === block.id} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadMedia(file, block); e.target.value = ""; }} />{uploadingVideo === block.id ? "Uploading…" : "Upload video or GIF"}</label><small>MP4, WebM, Ogg, or GIF · up to 15 MB. YouTube is still best for longer clips.</small></div><label><span>Caption / description</span><input value={block.caption} onChange={(e) => updateBlock(block.id, { caption: e.target.value })} /></label></>}
             {block.type === "video-comparison" && <div className="comparison-fields">
               <label className="comparison-title"><span>Comparison title (optional)</span><input value={block.content} placeholder="Before and after" onChange={(e) => updateBlock(block.id, { content: e.target.value })} /></label>
               {(["left", "right"] as const).map((side) => {
@@ -278,12 +373,12 @@ export default function Editor() {
                 const label = right ? block.secondaryCaption ?? "" : block.caption;
                 return <section className="comparison-side" key={side}>
                   <div className="comparison-side-heading"><b>{right ? "Right video" : "Left video"}</b><span>{right ? "B" : "A"}</span></div>
-                  <label><span>YouTube or direct video URL</span><input type="url" value={url} placeholder="https://…" onChange={(e) => updateBlock(block.id, right ? { secondaryUrl: e.target.value } : { url: e.target.value })} /></label>
-                  <div className="video-upload-row"><label className={`upload-button ${uploadingVideo === uploadId ? "uploading" : ""}`}><input type="file" accept="video/mp4,video/webm,video/ogg" disabled={uploadingVideo === uploadId} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadVideo(file, block, side); e.target.value = ""; }} />{uploadingVideo === uploadId ? "Uploading…" : "Upload video file"}</label></div>
+                  <label><span>YouTube, direct video, or direct GIF URL</span><input type="url" value={url} placeholder="https://…" onChange={(e) => updateBlock(block.id, right ? { secondaryUrl: e.target.value } : { url: e.target.value })} /></label>
+                  <div className="video-upload-row"><label className={`upload-button ${uploadingVideo === uploadId ? "uploading" : ""}`}><input type="file" accept="video/mp4,video/webm,video/ogg,image/gif" disabled={uploadingVideo === uploadId} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadMedia(file, block, side); e.target.value = ""; }} />{uploadingVideo === uploadId ? "Uploading…" : "Upload video or GIF"}</label></div>
                   <label><span>Label</span><input value={label} placeholder={right ? "After" : "Before"} onChange={(e) => updateBlock(block.id, right ? { secondaryCaption: e.target.value } : { caption: e.target.value })} /></label>
                 </section>;
               })}
-              <small className="comparison-help">Each side accepts YouTube, a direct URL, or an MP4/WebM/Ogg upload up to 15 MB.</small>
+              <small className="comparison-help">Each side accepts YouTube, a direct video or GIF URL, or an MP4/WebM/Ogg/GIF upload up to 15 MB.</small>
             </div>}
             {block.type === "metronome" && <div className="metronome-fields">
               <label className={hasMillisecondDelay(block.content) ? "timing-disabled" : ""}><span>BPM</span><input type="number" min="20" max="300" disabled={hasMillisecondDelay(block.content)} value={block.bpm ?? 90} onChange={(e) => updateBlock(block.id, { bpm: Math.max(20, Math.min(300, Number(e.target.value) || 90)) })} /><small>{hasMillisecondDelay(block.content) ? "Ignored — explicit ms timing is active." : "Used when no ms delay is present."}</small></label>

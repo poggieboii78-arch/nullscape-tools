@@ -3,12 +3,13 @@ export const dynamic = "force-dynamic";
 const owner = "poggieboii78-arch";
 const repo = "nullscape-tools";
 const publicBaseUrl = "https://poggieboii78-arch.github.io/nullscape-tools/compendium/uploads";
-const maxVideoBytes = 15 * 1024 * 1024;
+const maxMediaBytes = 15 * 1024 * 1024;
 
-const videoExtensions: Record<string, string> = {
+const mediaExtensions: Record<string, string> = {
   "video/mp4": "mp4",
   "video/webm": "webm",
   "video/ogg": "ogv",
+  "image/gif": "gif",
 };
 
 function connection() {
@@ -53,11 +54,11 @@ export async function POST(request: Request) {
   if (!process.env.GITHUB_TOKEN) return Response.json({ error: "The GitHub publishing secret is not configured." }, { status: 503 });
 
   const blockId = safeBlockId(form.get("blockId"));
-  if (!(upload instanceof File) || !blockId) return Response.json({ error: "Choose a video file and try again." }, { status: 400 });
+  if (!(upload instanceof File) || !blockId) return Response.json({ error: "Choose a video or GIF file and try again." }, { status: 400 });
 
-  const extension = videoExtensions[upload.type];
-  if (!extension) return Response.json({ error: "Use an MP4, WebM, or Ogg video." }, { status: 415 });
-  if (!upload.size || upload.size > maxVideoBytes) return Response.json({ error: "Videos must be 15 MB or smaller." }, { status: 413 });
+  const extension = mediaExtensions[upload.type];
+  if (!extension) return Response.json({ error: "Use an MP4, WebM, Ogg, or GIF file." }, { status: 415 });
+  if (!upload.size || upload.size > maxMediaBytes) return Response.json({ error: "Videos and GIFs must be 15 MB or smaller." }, { status: 413 });
 
   const filename = `${blockId}.${extension}`;
   const path = `apps/tech-compendium/public/uploads/${filename}`;
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
     method: "PUT",
     headers: githubHeaders(true),
     body: JSON.stringify({
-      message: existingSha ? "Replace Compendium video" : "Upload Compendium video",
+      message: existingSha ? "Replace Compendium media" : "Upload Compendium media",
       content: encodeBytes(await upload.arrayBuffer()),
       branch: "main",
       ...(existingSha ? { sha: existingSha } : {}),
