@@ -40,7 +40,8 @@ export async function ensureCompendiumSchema() {
     d1.prepare(`CREATE TABLE IF NOT EXISTS blocks (
       id TEXT PRIMARY KEY, tech_id TEXT NOT NULL, type TEXT NOT NULL,
       content TEXT NOT NULL DEFAULT '', url TEXT NOT NULL DEFAULT '',
-      caption TEXT NOT NULL DEFAULT '', sort_order INTEGER NOT NULL DEFAULT 0
+      caption TEXT NOT NULL DEFAULT '', secondary_url TEXT NOT NULL DEFAULT '',
+      secondary_caption TEXT NOT NULL DEFAULT '', sort_order INTEGER NOT NULL DEFAULT 0
     )`),
     d1.prepare("CREATE INDEX IF NOT EXISTS techs_class_idx ON techs (class_id, sort_order)"),
     d1.prepare("CREATE INDEX IF NOT EXISTS blocks_tech_idx ON blocks (tech_id, sort_order)"),
@@ -48,6 +49,13 @@ export async function ensureCompendiumSchema() {
   const columns = await d1.prepare("PRAGMA table_info(techs)").all<{ name: string }>();
   if (!(columns.results ?? []).some((column) => column.name === "icon")) {
     await d1.prepare("ALTER TABLE techs ADD COLUMN icon TEXT NOT NULL DEFAULT ''").run();
+  }
+  const blockColumns = await d1.prepare("PRAGMA table_info(blocks)").all<{ name: string }>();
+  if (!(blockColumns.results ?? []).some((column) => column.name === "secondary_url")) {
+    await d1.prepare("ALTER TABLE blocks ADD COLUMN secondary_url TEXT NOT NULL DEFAULT ''").run();
+  }
+  if (!(blockColumns.results ?? []).some((column) => column.name === "secondary_caption")) {
+    await d1.prepare("ALTER TABLE blocks ADD COLUMN secondary_caption TEXT NOT NULL DEFAULT ''").run();
   }
 }
 
@@ -68,7 +76,7 @@ export async function loadCompendium(includeDrafts = false): Promise<CompendiumD
     d1.prepare(`SELECT id, class_id, slug, title, icon, summary, sort_order, published, updated_at
       FROM techs ${includeDrafts ? "" : "WHERE published = 1"} ORDER BY sort_order, title`).all<Record<string, unknown>>(),
     d1.prepare("SELECT id, class_id, title, sort_order FROM tech_separators ORDER BY sort_order, title").all<Record<string, unknown>>(),
-    d1.prepare("SELECT id, tech_id, type, content, url, caption FROM blocks ORDER BY sort_order, id").all<Record<string, unknown>>(),
+    d1.prepare("SELECT id, tech_id, type, content, url, caption, secondary_url, secondary_caption FROM blocks ORDER BY sort_order, id").all<Record<string, unknown>>(),
   ]);
 
   const blocksByTech = new Map<string, CompendiumBlock[]>();
@@ -78,6 +86,7 @@ export async function loadCompendium(includeDrafts = false): Promise<CompendiumD
     list.push({
       id: String(row.id), type: String(row.type) as never,
       content: String(row.content ?? ""), url: String(row.url ?? ""), caption: String(row.caption ?? ""),
+      secondaryUrl: String(row.secondary_url ?? ""), secondaryCaption: String(row.secondary_caption ?? ""),
     });
     blocksByTech.set(techId, list);
   }
@@ -138,9 +147,9 @@ export async function saveCompendium(data: CompendiumData, ensure = true) {
         .bind(tech.id, item.id, tech.slug, tech.title, tech.icon || "", tech.summary, techIndex, tech.published ? 1 : 0, new Date().toISOString()));
       tech.blocks.forEach((block, blockIndex) => {
         statements.push(d1.prepare(`INSERT INTO blocks
-          (id, tech_id, type, content, url, caption, sort_order)
-          VALUES (?, ?, ?, ?, ?, ?, ?)`)
-          .bind(block.id, tech.id, block.type, block.content, block.url, block.caption, blockIndex));
+          (id, tech_id, type, content, url, caption, secondary_url, secondary_caption, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .bind(block.id, tech.id, block.type, block.content, block.url, block.caption, block.secondaryUrl ?? "", block.secondaryCaption ?? "", blockIndex));
       });
     });
   });

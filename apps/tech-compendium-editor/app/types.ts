@@ -1,5 +1,5 @@
-export type BlockType = "heading" | "paragraph" | "steps" | "callout" | "video" | "image" | "metronome";
-export type CompendiumBlock = { id: string; type: BlockType; content: string; url: string; caption: string; bpm?: number; countIn?: number; loop?: boolean };
+export type BlockType = "heading" | "paragraph" | "steps" | "callout" | "video" | "video-comparison" | "image" | "metronome";
+export type CompendiumBlock = { id: string; type: BlockType; content: string; url: string; caption: string; secondaryUrl?: string; secondaryCaption?: string; bpm?: number; countIn?: number; loop?: boolean };
 export type CompendiumTech = { id: string; kind?: "tech"; slug: string; title: string; icon: string; summary: string; published: boolean; updatedAt: string; blocks: CompendiumBlock[] };
 export type CompendiumTechSeparator = { id: string; kind: "separator"; title: string };
 export type CompendiumTechItem = CompendiumTech | CompendiumTechSeparator;
