@@ -21,29 +21,49 @@
           "slug": "diver-bhop",
           "title": "Diver Bhop",
           "icon": "",
-          "summary": "",
+          "summary": "One of the most Integral Techs for Diver movement.",
           "published": true,
           "updatedAt": "2026-08-08T23:50:18.752Z",
           "blocks": [
             {
-              "id": "block-msl1139f-c2f56",
-              "type": "metronome",
-              "content": "E (10ms) Space",
+              "id": "block-msl35khc-ls8te",
+              "type": "paragraph",
+              "content": "\n\nPrerequisites:\n2 Hands (Optional)\nA pulse (Optional)",
               "url": "",
-              "caption": "Practice the sequence in time",
+              "caption": "",
               "bpm": 90,
-              "countIn": 0,
-              "loop": false
+              "countIn": 4,
+              "loop": true
             },
             {
               "id": "block-msl13ubj-d93e5",
               "type": "video",
               "content": "",
               "url": "",
+              "caption": "Put video of diver bhop here lel",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msl38b43-ewbnv",
+              "type": "steps",
+              "content": "Do a dive [[icon:Diver]]\nJump",
+              "url": "",
               "caption": "",
               "bpm": 90,
               "countIn": 4,
               "loop": true
+            },
+            {
+              "id": "block-msl1139f-c2f56",
+              "type": "metronome",
+              "content": "E (10ms) Space",
+              "url": "",
+              "caption": "This Should be roughly the timing for the bhop",
+              "bpm": 90,
+              "countIn": 0,
+              "loop": false
             }
           ]
         }
