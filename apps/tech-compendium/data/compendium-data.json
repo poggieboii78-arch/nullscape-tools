@@ -264,6 +264,18 @@
               "bpm": 90,
               "countIn": 4,
               "loop": true
+            },
+            {
+              "id": "block-msmcsgrx-o3drj",
+              "type": "paragraph",
+              "content": "Why does this work?\n\nSimply because you regenerate your Double jumps every time you go out of Spirit form!",
+              "url": "",
+              "caption": "",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
             }
           ]
         },
@@ -374,11 +386,23 @@
               "bpm": 90,
               "countIn": 4,
               "loop": true
+            },
+            {
+              "id": "block-msmcwe7q-ftmnb",
+              "type": "video",
+              "content": "",
+              "url": "https://poggieboii78-arch.github.io/nullscape-tools/compendium/uploads/block-msmcwe7q-ftmnb.mp4",
+              "caption": "Visual Demonstration:",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
             }
           ]
         }
       ],
-      "updatedAt": "2026-08-09T22:04:57.951Z"
+      "updatedAt": "2026-08-09T22:12:00.838Z"
     },
     {
       "id": "class-msl0qzqz-wfdmj",
