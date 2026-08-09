@@ -43,6 +43,7 @@ export type CompendiumClass = {
   description: string;
   accent: string;
   published: boolean;
+  updatedAt?: string;
   techs: CompendiumTechItem[];
 };
 
@@ -50,6 +51,8 @@ export type CompendiumData = {
   title: string;
   subtitle: string;
   classes: CompendiumClass[];
+  deletedClassIds?: string[];
+  classOrderUpdatedAt?: string;
 };
 
 const fallbackCompendium: CompendiumData = {

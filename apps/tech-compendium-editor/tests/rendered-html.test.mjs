@@ -45,6 +45,22 @@ test("allows video-sized multipart requests to reach the media route", async () 
   assert.deepEqual(await response.json(), { error: "The GitHub publishing secret is not configured." });
 });
 
+test("allows GIF uploads to reach the media route", async () => {
+  const form = new FormData();
+  form.set("video", new File([new Uint8Array([71, 73, 70, 56, 57, 97])], "example.gif", { type: "image/gif" }));
+  form.set("blockId", "test-gif");
+
+  const response = await fetchWorker({
+    email: "owner@example.com",
+    allowedEmails: "owner@example.com",
+    path: "/api/media",
+    init: { method: "POST", body: form },
+  });
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "The GitHub publishing secret is not configured." });
+});
+
 test("renders development preview metadata for an allowed editor", async () => {
   const response = await fetchWorker({
     email: "friend@example.com",

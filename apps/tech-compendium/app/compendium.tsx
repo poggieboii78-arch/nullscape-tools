@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CompendiumBlock, CompendiumData, CompendiumTechItem } from "./types";
+import type { CompendiumBlock, CompendiumClass, CompendiumData, CompendiumTechItem } from "./types";
 import { isCompendiumTech, starterCompendium } from "./types";
 
 function safeMediaUrl(value: string) {
@@ -20,11 +20,94 @@ function Icon({ value, fallback, className = "" }: { value: string; fallback: st
 
 const inlineIconFile: Record<string, string> = { "Drowned Aegis": "DrownedÆgis.png" };
 const inlineIconUrl = (name: string) => `https://nullscape.wiki/wiki/Special:Redirect/file/${encodeURIComponent(inlineIconFile[name] ?? name.replace(/[\s:'’]/g, "") + ".png")}`;
-function RichText({ children }: { children: string }) {
-  const parts = children.split(/(\[\[icon:[^\]]+\]\])/g);
+
+const upgradeDescriptions: Record<string, string> = {
+  Adrenaline: "+20% movement speed in Solo and Duo.",
+  "Business License": "+25% Golden Gift yield.",
+  Paycheck: "Earn Golden Gifts each round when at least half the players survive.",
+  "Swiftness Ring": "+10% movement speed per stack.",
+  "Better Jump Pads": "Adds more Jump Pads with less-random positions.",
+  "Defuse Kit": "+20% chance for Tripmines not to explode.",
+  "Double Jump": "Allows an extra jump in the air.",
+  "Grapple Points": "Adds powerful Grapple Points to the map.",
+  "Last Robloxian Standing": "Grants a survival buff when you are the last player alive.",
+  Medal: "Spawns the Medal for Golden Gifts and difficult Curse choices.",
+  Radar: "Keeps the arrow visible and highlights nearby Gifts.",
+  "Tria Orbs": "Adds boost Orbs around the map.",
+  "Advanced Gravity Coil": "Grants higher, controllable jumps.",
+  "Fanny Pack": "Complete yellow tiles during collapse for bonus Gifts.",
+  "Grace Wings": "Greatly improves air control.",
+  Helmet: "Bonking sends you upward with full control.",
+  "Ice Skates": "Reduces slipping and grants a directional speed boost.",
+  "Pocket Bell": "Grants another extra jump.",
+  "Radar Module: Altars": "Periodically marks unused Altars.",
+  "Radar Module: Enemies": "Tracks enemies through walls.",
+  "Radar Module: Players": "Periodically highlights other players.",
+  "Radar Module: Tripmines": "Highlights nearby Tripmines.",
+  "More Altars": "Spawns an additional Altar.",
+  "Larger Grapple Points": "Makes Grapple Points 25% larger.",
+  "Subspacial Barrier": "Adds protection from Tripmines and Void Implosions.",
+  "Gift Magnet": "Increases Gift pickup range.",
+  "Matrix Tetrahedron": "Grants instant acceleration and removes slippery movement.",
+  "Radar Module: Instruments": "Tracks Cadence's instruments.",
+  Shield: "Lets you take an extra hit.",
+  "Sport Shoes": "+40% movement speed.",
+  "Panic Necklace": "Grants a strong temporary buff when your last Shield breaks.",
+  "Drowned Aegis": "Protection Altars also grant a one-use Void shield.",
+  "Gift Idol": "Allows Gifts to collect nearby Gifts.",
+};
+
+const classDescriptions: Record<string, string> = {
+  Charger: "A high-speed class built around charging through straight paths.",
+  Diver: "A movement class built around dives, cancels, and precise landings.",
+  Spirit: "A survivability class that uses spirit form for protection and momentum.",
+  Grappler: "A momentum class that grapples, swings, and reels from platforms.",
+  Glider: "An aerial class with sustained gliding and strong directional control.",
+  Wanted: "A passive movement class that scales strongly with upgrades.",
+  Prisoner: "A challenge class with restricted upgrades and extra Tripcoin rewards.",
+};
+
+const sharkTailDescriptions: Record<string, string> = {
+  Charger: "Press Ability or Alt Ability during a charge to convert charge momentum upward.",
+  Diver: "Press Ability or Alt Ability during a dive to cancel it and redirect the momentum upward.",
+  Grappler: "Press Ability while reeling to cancel the reel and boost upward.",
+  Spirit: "Allows the spirit body to be placed while airborne.",
+  Glider: "Hold Alt Ability while gliding for more speed and Gift range at the cost of faster stamina drain.",
+  Wanted: "Shark Tail has no class effect for Wanted.",
+  Prisoner: "Shark Tail has no class effect for Prisoner.",
+};
+
+function iconDescription(name: string, activeClass?: CompendiumClass) {
+  const className = activeClass?.name ?? "This class";
+  if (name === "Ninja Belt") return `${className}: unlocks its class-specific Ninja Belt ability upgrade.`;
+  if (name === "Shark Tail") return sharkTailDescriptions[className] ?? `${className}: unlocks its stronger class-specific movement technique.`;
+  if (name === "Miniature Hourglass") return `${className}: grants its late-game class-specific Hourglass buff.`;
+  if (name.toLowerCase() === activeClass?.name.toLowerCase()) return activeClass.description || classDescriptions[name] || `${name} class.`;
+  return upgradeDescriptions[name] || classDescriptions[name] || `${name} icon.`;
+}
+
+const richTokenPattern = /(\[\[icon:[^\]]+\]\]|\[[^\]\n]+\]\(https:\/\/[^\s)]+\)|https:\/\/[^\s<]+)/gi;
+
+function RichText({ children, activeClass }: { children: string; activeClass?: CompendiumClass }) {
+  const parts = children.split(richTokenPattern);
   return <>{parts.map((part, index) => {
-    const match = part.match(/^\[\[icon:(.+)\]\]$/);
-    return match ? <img className="inline-emoji" src={inlineIconUrl(match[1])} alt={match[1]} title={match[1]} key={`${part}-${index}`} /> : <span key={index}>{part}</span>;
+    const iconMatch = part.match(/^\[\[icon:(.+)\]\]$/);
+    if (iconMatch) {
+      const name = iconMatch[1].trim();
+      const description = iconDescription(name, activeClass);
+      return <span className="inline-emoji-wrap" tabIndex={0} aria-label={`${name}: ${description}`} key={`${part}-${index}`}>
+        <img className="inline-emoji" src={inlineIconUrl(name)} alt="" />
+        <span className="emoji-tooltip" role="tooltip"><b>{name}</b><small>{activeClass?.name ? `${activeClass.name} tech` : "Compendium icon"}</small><span>{description}</span></span>
+      </span>;
+    }
+    const markdownLink = part.match(/^\[([^\]\n]+)\]\((https:\/\/[^\s)]+)\)$/i);
+    if (markdownLink) return <a className="rich-link" href={markdownLink[2]} target="_blank" rel="noreferrer" key={`${part}-${index}`}>{markdownLink[1]}</a>;
+    if (/^https:\/\//i.test(part)) {
+      const trailing = part.match(/[.,!?;:]+$/)?.[0] ?? "";
+      const href = trailing ? part.slice(0, -trailing.length) : part;
+      return <span key={`${part}-${index}`}><a className="rich-link" href={href} target="_blank" rel="noreferrer">{href}</a>{trailing}</span>;
+    }
+    return <span key={index}>{part}</span>;
   })}</>;
 }
 
@@ -37,6 +120,7 @@ function videoSource(value: string) {
     return { kind: "embed", src: id ? `https://www.youtube-nocookie.com/embed/${id}` : "" };
   }
   if (url.hostname === "youtu.be") return { kind: "embed", src: `https://www.youtube-nocookie.com/embed/${url.pathname.slice(1)}` };
+  if (safe.startsWith("data:image/gif") || url.pathname.toLowerCase().endsWith(".gif")) return { kind: "gif", src: safe };
   return { kind: "video", src: safe };
 }
 
@@ -45,6 +129,8 @@ function VideoMedia({ url, title }: { url: string; title: string }) {
   if (!source.src) return null;
   return source.kind === "embed"
     ? <iframe src={source.src} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+    : source.kind === "gif"
+      ? <img src={source.src} alt={title} />
     : <video src={source.src} controls preload="metadata" />;
 }
 
@@ -144,13 +230,13 @@ function InputMetronome({ block }: { block: CompendiumBlock }) {
   </section>;
 }
 
-function Block({ block }: { block: CompendiumBlock }) {
-  if (block.type === "heading") return <h2 className="article-heading"><RichText>{block.content}</RichText></h2>;
-  if (block.type === "paragraph") return <p className="article-copy"><RichText>{block.content}</RichText></p>;
-  if (block.type === "callout") return <aside className="callout"><span>✦</span><p><RichText>{block.content}</RichText></p></aside>;
+function Block({ block, activeClass }: { block: CompendiumBlock; activeClass?: CompendiumClass }) {
+  if (block.type === "heading") return <h2 className="article-heading"><RichText activeClass={activeClass}>{block.content}</RichText></h2>;
+  if (block.type === "paragraph") return <p className="article-copy"><RichText activeClass={activeClass}>{block.content}</RichText></p>;
+  if (block.type === "callout") return <aside className="callout"><span>✦</span><p><RichText activeClass={activeClass}>{block.content}</RichText></p></aside>;
   if (block.type === "steps") {
-    const steps = block.content.split("\n").map((step) => step.trim()).filter(Boolean);
-    return <ol className="steps">{steps.map((step, index) => <li key={`${block.id}-${index}`}><b>{index + 1}</b><span><RichText>{step}</RichText></span></li>)}</ol>;
+    const steps = block.content.split("\n").map((step) => step.trim()).filter(Boolean).map((text, index) => ({ text, number: index + 1 })).filter((step) => step.text !== "---");
+    return steps.length ? <ol className="steps">{steps.map((step) => <li key={`${block.id}-${step.number}`}><b>{step.number}</b><span><RichText activeClass={activeClass}>{step.text}</RichText></span></li>)}</ol> : null;
   }
   if (block.type === "image") {
     const src = safeMediaUrl(block.url);
@@ -159,7 +245,7 @@ function Block({ block }: { block: CompendiumBlock }) {
   if (block.type === "video") {
     const source = videoSource(block.url);
     if (!source.src) return null;
-    return <figure className="media-card video-card">{source.kind === "embed" ? <iframe src={source.src} title={block.caption || "Tech video"} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <video src={source.src} controls preload="metadata" />}<figcaption>{block.caption}</figcaption></figure>;
+    return <figure className="media-card video-card"><VideoMedia url={block.url} title={block.caption || "Tech video or GIF"} /><figcaption>{block.caption}</figcaption></figure>;
   }
   if (block.type === "video-comparison") {
     const left = videoSource(block.url);
@@ -267,10 +353,10 @@ export default function Compendium() {
               <header className="article-hero">
                 <div className="article-kicker"><span><Icon value={activeTech.icon || activeClass?.icon || ""} fallback="✦" /></span>{activeClass?.name} tech</div>
                 <h1>{activeTech.title}</h1>
-                <p className="article-summary"><RichText>{activeTech.summary}</RichText></p>
+                <p className="article-summary"><RichText activeClass={activeClass}>{activeTech.summary}</RichText></p>
                 <div className="article-rule" />
               </header>
-              <div className="article-content">{activeTech.blocks.map((block) => <Block block={block} key={block.id} />)}</div>
+              <div className="article-content">{activeTech.blocks.map((block) => <Block block={block} activeClass={activeClass} key={block.id} />)}</div>
             </> : <div className="empty-article"><span>✦</span><h1>Nothing here yet</h1><p>Add a tech in the private editor and it will appear here.</p></div>}
           </div>
         </article>
