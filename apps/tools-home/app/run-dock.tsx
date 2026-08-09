@@ -39,19 +39,34 @@ export const upgradeOptions=["Better Jump Pads","Paycheck","Business License","S
 export const greaterStackLimits:Record<string,number>=Object.fromEntries(greaterOptions.map(name=>[name,1]));
 export const upgradeStackLimits:Record<string,number>={"Business License":2,"Defuse Kit":3,"Paycheck":5,"Swiftness Ring":3,"Subspacial Barrier":2,"Gift Magnet":3,"Gift Idol":5};
 const medalNames=new Set(medalOptions.map(([name])=>name));
-const curseRules:Record<string,{min?:number;enemy?:[string,number];greater?:string}>={
-  "Bigger Tripmines":{min:5},"More Tripmines":{min:5},"LAP 2":{min:8},"Nothing?":{min:8},"Barotrauma":{min:15},"Beacon Mirage":{min:25},
-  "More Ringing":{enemy:["Bell",1]},"Mighty Gong":{enemy:["Bell",1]},"Concussion":{enemy:["Bell",1]},"Bloody Bell":{enemy:["Bell",1]},
-  "Pacifier":{enemy:["Baby",1]},"Problem Child":{min:5,enemy:["Baby",1]},
-  "Scorched Earth":{enemy:["ICBM",1]},"Bigger Blast":{min:5,enemy:["ICBM",1]},"Missile Silo":{enemy:["ICBM",1]},
-  "Bigger Marts":{enemy:["Mart",1]},"Mart Infection":{enemy:["Mart",1]},"Mart Slide":{min:8,enemy:["Mart",1]},
-  "Closer Husk":{enemy:["Husk",1]},"Further Husk":{enemy:["Husk",1]},"Taller Husk":{enemy:["Husk",1]},"Husk Express":{min:5,enemy:["Husk",2]},"Conga Line":{min:8,enemy:["Husk",1]},"Random Husk":{enemy:["Husk",1]},
-  "Resonating Shockwaves":{enemy:["Springer",1]},"Springloaded":{min:5,enemy:["Springer",1]},
-  "Bloodier Meat":{min:5,enemy:["Flesh",1]},"Blighted Jump Pads":{enemy:["Flesh",1]},
-  "Camouflage":{enemy:["Guardian",1]},"Shotgun":{min:5,enemy:["Guardian",1]},
-  "Ambush":{enemy:["Telefragger",1]},"Accurate Telefragger":{enemy:["Telefragger",1]},
-  "Lost Embers":{enemy:["Kolóna",1]},"Burning Bouquet":{enemy:["Kolóna",1],greater:"Razorbloom"},
-  "Blade Carousel":{min:5,enemy:["Voidbreaker",1]},"Deadly Melody":{enemy:["Cadence",1]},
+type EnemyRequirement={anyOf:string[];label:string};
+type CurseRule={
+  min?:number; enemies?:EnemyRequirement[]; greater?:string; anyCurse?:string[]; excludes?:string[];
+  blockedDifficulties?:Difficulty[]; blockedParties?:Party[]; chaosOnly?:boolean;
+};
+const enemy=(label:string,...anyOf:string[]):EnemyRequirement=>({label,anyOf});
+const curseRules:Record<string,CurseRule>={
+  "Savory Ring":{min:5},
+  "Bigger Tripmines":{min:5,blockedDifficulties:["casual"]},"More Tripmines":{min:5,blockedDifficulties:["casual"]},
+  "High Roller":{min:5,excludes:["Tweaked Odds"]},"Tweaked Odds":{min:5,excludes:["High Roller"]},
+  "Fake Count":{min:8},"LAP 2":{min:8,excludes:["Fragile Gifts"]},"Fragile Gifts":{min:8,excludes:["LAP 2"]},
+  "Nothing?":{min:8},"Jackpot":{min:10,anyCurse:["High Roller","Tweaked Odds"]},
+  "Barotrauma":{min:15,blockedDifficulties:["casual"]},"Minefield":{min:15,blockedDifficulties:["casual"]},"Beacon Mirage":{min:25},
+  "More Ringing":{enemies:[enemy("Bell","Bell")]},"Mighty Gong":{enemies:[enemy("Bell","Bell")]},"Concussion":{enemies:[enemy("Bell","Bell")]},
+  "Pacifier":{enemies:[enemy("Baby","Baby","Voidbound Baby")]},"Problem Child":{min:5,enemies:[enemy("Baby","Baby","Voidbound Baby")]},
+  "Scorched Earth":{enemies:[enemy("ICBM","ICBM")]},"Bigger Blast":{min:5,enemies:[enemy("ICBM","ICBM")]},
+  "Bigger Marts":{enemies:[enemy("Mart","Mart")]},"Mart Infection":{min:8,enemies:[enemy("Mart","Mart")],excludes:["Mart Slide"],blockedParties:["solo"]},
+  "Mart Slide":{min:8,enemies:[enemy("Mart","Mart")],excludes:["Mart Infection"]},
+  "Closer Husk":{enemies:[enemy("Husk","Husk")],excludes:["Further Husk"]},"Further Husk":{enemies:[enemy("Husk","Husk")],excludes:["Closer Husk"]},
+  "Taller Husk":{enemies:[enemy("Husk","Husk")]},"Husk Express":{min:5,enemies:[enemy("Husk","Husk")]},
+  "Conga Line":{min:8,enemies:[enemy("Husk","Husk")]},"Random Husk":{min:15,enemies:[enemy("Husk","Husk")]},
+  "Resonating Shockwaves":{min:5,enemies:[enemy("Springer","Springer"),enemy("Bell","Bell")]},"Springloaded":{min:5,enemies:[enemy("Springer","Springer")]},
+  "Bloodier Meat":{min:5,enemies:[enemy("Flesh","Flesh")]},"Blighted Jump Pads":{min:5,enemies:[enemy("Flesh","Flesh")]},
+  "Camouflage":{min:8,enemies:[enemy("Guardian","Guardian","Voidbound Guardian")]},"Shotgun":{min:5,enemies:[enemy("Guardian","Guardian","Voidbound Guardian")]},
+  "Ambush":{enemies:[enemy("Telefragger","Telefragger")]},"Accurate Telefragger":{enemies:[enemy("Telefragger","Telefragger")]},
+  "Lost Embers":{enemies:[enemy("Kolóna","Kolóna")]},"Burning Bouquet":{enemies:[enemy("Kolóna","Kolóna")],greater:"Razorbloom"},
+  "Blade Carousel":{min:5,enemies:[enemy("Voidbreaker","Voidbreaker")]},"Deadly Melody":{enemies:[enemy("Cadence","Cadence")],blockedParties:["solo"]},
+  "Mighty Cavalry":{chaosOnly:true},"Missile Silo":{chaosOnly:true},"Bloody Bell":{chaosOnly:true},"Delusion":{chaosOnly:true},
 };
 
 const iconOverrides:Record<string,string>={
@@ -206,16 +221,17 @@ type DockTab="run"|"enemies"|"curses"|"medal"|"greater"|"upgrades";
 const tabLabels:Record<DockTab,string>={run:"Run Data",enemies:"Enemies",curses:"Curses",medal:"Medal Curses",greater:"Greater",upgrades:"Upgrades"};
 
 export function RunDock({run,update,reset,applyLinkedRun,toolId,toolSteps=[]}:{run:SharedRun;update:(change:Partial<SharedRun>|((current:SharedRun)=>Partial<SharedRun>))=>void;reset:()=>void;applyLinkedRun:(run:SharedRun)=>void;toolId:string;toolSteps?:TourStep[]}){
-  const [open,setOpen]=useState(false);const [tab,setTab]=useState<DockTab>("run");const [search,setSearch]=useState("");const [checkPossible,setCheckPossible]=useState(true);const [tour,setTour]=useState(-1);const [historyOpen,setHistoryOpen]=useState(false);const [linkActive,setLinkActive]=useState(false);const [focusRect,setFocusRect]=useState<{left:number;top:number;width:number;height:number}|null>(null);const seenKey=`nullscape-tour-seen-${toolId}-v9`;const activity=useActivityState();const archives=useArchiveState();
+  const [open,setOpen]=useState(false);const [tab,setTab]=useState<DockTab>("run");const [search,setSearch]=useState("");const [checkPossible,setCheckPossible]=useState(true);const [tour,setTour]=useState(-1);const [historyOpen,setHistoryOpen]=useState(false);const [linkActive,setLinkActive]=useState(false);const [focusRect,setFocusRect]=useState<{left:number;top:number;width:number;height:number}|null>(null);const seenKey=`nullscape-tour-seen-${toolId}-${toolId==="home"?"v10":"v9"}`;const activity=useActivityState();const archives=useArchiveState();
   const steps=useMemo<TourStep[]>(()=>[
     ...(toolId==="home"?[
       {selector:"[data-tour='dock-handle']",title:"Your run follows you",text:"Open the Quick Menu here. The newest edit wins if the site is open in more than one tab."},
+      {selector:"[data-tour='dock-body'] .input-mode",title:"Notice “Edit from”",text:"This decides where controls are editable. Choose Quick Menu, Tool page, or Both—if something looks locked, check this switch first."},
+      {selector:"[data-tour='calculator-link']",title:"Link with your friends",text:"Create a Calculator Link and send the invite. Golden Gifts, level, lobby data, enemies, Curses, and upgrades then update live for everyone."},
       {selector:"[data-tour='dock-body'] .dock-tabs",title:"Everything in one place",text:"Track run data, enemies, regular Curses, Medal Curses, Greater Curses, and upgrades here."},
-      {selector:"[data-tour='dock-body'] .input-mode",title:"Choose where you enter data",text:"Use this toggle to enter run data in the Quick Menu, on each tool page, or in both places—whichever you prefer."},
     ]:[]),...toolSteps,
   ],[toolId,toolSteps]);
   useEffect(()=>{if(localStorage.getItem(seenKey)!=="1")setTour(0);},[seenKey]);
-  useEffect(()=>{if(tour<0)return;setOpen(steps[tour]?.selector.includes("dock-body")??false);},[tour,steps]);
+  useEffect(()=>{if(tour<0)return;const selector=steps[tour]?.selector??"";setOpen(selector.includes("dock-body")||selector.includes("calculator-link"));},[tour,steps]);
   useEffect(()=>{if(tour<0){setFocusRect(null);return;}const measure=()=>{const el=document.querySelector(steps[tour]?.selector);if(!el){setFocusRect(null);return;}if(!steps[tour]?.selector.includes("dock-"))el.scrollIntoView({behavior:"auto",block:"center"});const rect=el.getBoundingClientRect();const zoom=Number(getComputedStyle(document.body).zoom)||1;const pad=7;setFocusRect({left:Math.max(7,rect.left/zoom-pad),top:Math.max(7,rect.top/zoom-pad),width:Math.min(innerWidth/zoom-14,rect.width/zoom+pad*2),height:Math.min(innerHeight/zoom-14,rect.height/zoom+pad*2)});};const timer=window.setTimeout(measure,90);const settledTimer=window.setTimeout(measure,380);window.addEventListener("resize",measure);window.addEventListener("scroll",measure,true);return()=>{clearTimeout(timer);clearTimeout(settledTimer);window.removeEventListener("resize",measure);window.removeEventListener("scroll",measure,true);};},[tour,steps,open]);
   useEffect(()=>{if(tour<0)return;const escape=(event:KeyboardEvent)=>{if(event.key==="Escape"){localStorage.setItem(seenKey,"1");setTour(-1);}};window.addEventListener("keydown",escape);return()=>window.removeEventListener("keydown",escape);},[tour,seenKey]);
   useEffect(()=>{if(!historyOpen)return;const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setHistoryOpen(false);};window.addEventListener("keydown",escape);return()=>window.removeEventListener("keydown",escape);},[historyOpen]);
@@ -224,7 +240,7 @@ export function RunDock({run,update,reset,applyLinkedRun,toolId,toolSteps=[]}:{r
   const categoryFor=(item:DockTab):TrackedCategory=>item==="medal"?"medalCurses":item==="greater"?"greaterCurses":item as TrackedCategory;
   const activityLabel=(category:TrackedCategory)=>({enemies:"ENEMY",curses:"CURSE",medalCurses:"MEDAL CURSE",greaterCurses:"GREATER CURSE",upgrades:"UPGRADE"}[category]);
   const ordered=(items:string[],key:TrackedCategory)=>items.filter(name=>name.toLowerCase().includes(search.trim().toLowerCase())).sort((a,b)=>{const active=(run[key][b]??0)-(run[key][a]??0);if(active)return active;const aStat=activity.stats[`${key}:${a}`],bStat=activity.stats[`${key}:${b}`];const aDistance=aStat?Math.abs(aStat[1]/aStat[0]-run.level):9999;const bDistance=bStat?Math.abs(bStat[1]/bStat[0]-run.level):9999;return aDistance-bDistance||a.localeCompare(b);});
-  const impossibleReason=(name:string)=>{if((run.curses[name]??0)>0)return"";const rule=curseRules[name];if(!rule)return"";if(rule.min&&run.level<rule.min)return`Level ${rule.min}`;if(rule.enemy&&(run.enemies[rule.enemy[0]]??0)<rule.enemy[1])return`Needs ${rule.enemy[1]>1?`${rule.enemy[1]} × `:""}${rule.enemy[0]}`;if(rule.greater&&(run.greaterCurses[rule.greater]??0)<1)return`Needs ${rule.greater}`;return"";};
+  const impossibleReason=(name:string)=>{if((run.curses[name]??0)>0)return"";const rule=curseRules[name];if(!rule)return"";if(rule.chaosOnly)return"Chaos only";if(rule.min&&run.level<rule.min)return`Level ${rule.min}`;if(rule.blockedDifficulties?.includes(run.difficulty))return`Not on ${run.difficulty[0].toUpperCase()+run.difficulty.slice(1)}`;if(rule.blockedParties?.includes(run.party))return`Not in ${run.party==="party-plus"?"Party+":run.party[0].toUpperCase()+run.party.slice(1)}`;const conflict=rule.excludes?.find(curse=>(run.curses[curse]??0)>0);if(conflict)return`Blocked by ${conflict}`;for(const requirement of rule.enemies??[]){if(!requirement.anyOf.some(candidate=>(run.enemies[candidate]??0)>0))return`Needs ${requirement.label}`;}if(rule.greater&&(run.greaterCurses[rule.greater]??0)<1)return`Needs ${rule.greater}`;if(rule.anyCurse&&!rule.anyCurse.some(curse=>(run.curses[curse]??0)>0))return`Needs ${rule.anyCurse.join(" or ")}`;return"";};
   const changeStack=(key:"enemies"|"curses",name:string,delta:number)=>{if(quickLocked)return;update(current=>{const next={...current[key]};const count=Math.max(0,(next[name]??0)+delta);if(count)next[name]=count;else delete next[name];return{[key]:next};});};
   const cycleStack=(key:"curses"|"medalCurses"|"greaterCurses"|"upgrades",name:string,max:number)=>{if(quickLocked)return;update(current=>{const next={...current[key]};const count=((next[name]??0)+1)%(max+1);if(count)next[name]=count;else delete next[name];if(key!=="medalCurses"&&!(key==="curses"&&medalNames.has(name)))return{[key]:next};const regular={...current.curses};const medals={...current.medalCurses};if(count){regular[name]=count;medals[name]=count;}else{delete regular[name];delete medals[name];}return{medalCurses:medals,curses:regular};});};
   const total=(map:StackMap)=>Object.values(map).reduce((sum,count)=>sum+count,0);
@@ -240,7 +256,7 @@ export function RunDock({run,update,reset,applyLinkedRun,toolId,toolSteps=[]}:{r
         <div className="input-mode"><span>EDIT FROM</span>{([['quick','Quick menu'],['both','Both'],['tool','Tool page']] as [InputMode,string][]).map(([mode,label])=><button key={mode} className={run.inputMode===mode?"active":""} onClick={()=>update({inputMode:mode})}>{label}</button>)}</div>
         <div className="dock-tab-row"><nav className="dock-tabs" aria-label="Quick Menu sections">{(Object.keys(tabLabels) as DockTab[]).map(item=><button key={item} className={tab===item?"active":""} onClick={()=>{setTab(item);setSearch("");}}>{tabLabels[item]}<small>{item==="enemies"?total(run.enemies):item==="curses"?total(run.curses):item==="medal"?total(run.medalCurses):item==="greater"?total(run.greaterCurses):item==="upgrades"?total(run.upgrades):""}</small></button>)}</nav><button className={`dock-next-level ${(expectedEnemies===0||currentEnemyCount>=expectedEnemies)&&currentCurseCount>0?"ready":""}`} disabled={run.inputMode==="tool"} onClick={()=>update({level:run.level+1})} title={`Advance from Level ${run.level} to Level ${run.level+1}. Recorded here: ${currentEnemyCount} enemies and ${currentCurseCount} Curse picks.`} aria-label={`Next intermission, Level ${run.level+1}`}><span>NEXT</span><b>→ L{run.level+1}</b></button></div>
         <div className={`dock-content ${quickLocked?"quick-locked":""}`}>
-          {tab!=="run"&&<div className="dock-filter-row"><label className="dock-search"><span>⌕</span><input value={search} onChange={event=>setSearch(event.target.value)} placeholder={`Search ${tabLabels[tab].toLowerCase()}…`} aria-label={`Search ${categoryFor(tab)}`}/>{search&&<button onClick={()=>setSearch("")} aria-label="Clear search">×</button>}</label>{tab==="curses"&&<label className="possible-toggle"><input type="checkbox" checked={checkPossible} onChange={event=>setCheckPossible(event.target.checked)}/><span>Possible now</span><small>Gray out Curses blocked by level, enemies, or Greater Curses.</small></label>}</div>}
+          {tab!=="run"&&<div className="dock-filter-row"><label className="dock-search"><span>⌕</span><input value={search} onChange={event=>setSearch(event.target.value)} placeholder={`Search ${tabLabels[tab].toLowerCase()}…`} aria-label={`Search ${categoryFor(tab)}`}/>{search&&<button onClick={()=>setSearch("")} aria-label="Clear search">×</button>}</label>{tab==="curses"&&<label className="possible-toggle"><input type="checkbox" checked={checkPossible} onChange={event=>setCheckPossible(event.target.checked)}/><span>Possible now</span><small>Gray out Curses blocked by level, mode, lobby, enemies, prerequisites, or conflicts.</small></label>}</div>}
           {tab==="run"&&<>
             <div className={`dock-run-grid ${run.inputMode==="tool"?"is-locked":""}`}>
               <label><span>Level</span><NumberInput disabled={run.inputMode==="tool"} min={1} value={run.level} label="Level" onCommit={level=>update({level})}/></label>
@@ -251,7 +267,7 @@ export function RunDock({run,update,reset,applyLinkedRun,toolId,toolSteps=[]}:{r
             </div>
             {run.inputMode==="tool"&&<p className="dock-lock-note">Quick editing is off. These values follow the tool page controls.</p>}
             <section className="dock-history">
-              <header><div><div className="history-title-row"><b>Run history</b><details className="history-help"><summary aria-label="Why Run History is saved">?</summary><div><strong>Why is this saved?</strong><p>Pickup levels stay in this browser. They are not uploaded or shared. The Quick Menu only uses them to sort items near when you usually pick them in future runs.</p><small>Reset Run archives this timeline and keeps the sorting bias. “Forget sorting bias” deletes only the learned sorting data.</small></div></details></div><span>{activity.events.length?`${activity.events.length} picks this run · ${activity.learning?"learning for future runs":"not training sorting"}`:Object.keys(activity.stats).length?"Sorting bias saved for future runs":"Your picks will appear here by level"}</span></div><div className="history-actions"><button className="all-runs-button" onClick={()=>setHistoryOpen(true)}>All runs <b>{archives.length}</b></button><label><input type="checkbox" checked={!activity.learning} onChange={event=>setActivityLearning(!event.target.checked)}/><span>Not my run / I’m not host</span></label>{Object.keys(activity.stats).length>0&&<button onClick={clearAllActivity}>Forget sorting bias</button>}</div></header>
+              <header><div><div className="history-title-row"><b>Run history</b><details className="history-help"><summary aria-label="Why Run History is saved">?</summary><div><strong>Why is this saved?</strong><p>Pickup levels stay in this browser. They are not uploaded or shared. The Quick Menu only uses them to sort items near when you usually pick them in future runs.</p><small>Reset Run archives this timeline and keeps the sorting bias. “Forget sorting bias” deletes only the learned sorting data.</small></div></details></div><span>{activity.events.length?`${activity.events.length} picks this run · ${activity.learning?"learning for future runs":"not training sorting"}`:Object.keys(activity.stats).length?"Sorting bias saved for future runs":"Your picks will appear here by level"}</span></div><div className="history-actions"><button className="all-runs-button" onClick={()=>setHistoryOpen(true)}>All runs <b>{archives.length}</b></button><button type="button" className={`not-my-run-button ${activity.learning?"":"active"}`} aria-pressed={!activity.learning} onClick={()=>setActivityLearning(!activity.learning)}>Not my run / I’m not host</button>{Object.keys(activity.stats).length>0&&<button onClick={clearAllActivity}>Forget sorting bias</button>}</div></header>
               {historyGroups.length?<div className="history-levels">{historyGroups.map(([level,events])=><article key={level} className={Number(level)===run.level?"current":""}><strong>LEVEL {level}</strong><div>{events.map((item,index)=><span className={item.learned?"":"not-learned"} key={`${item.category}-${item.name}-${index}`}><small>{activityLabel(item.category)}</small>{item.name}{item.amount>1?` ×${item.amount}`:""}{!item.learned&&<em>NOT TRAINED</em>}</span>)}</div></article>)}</div>:<p className="history-empty">Add enemies, Curses, Greater Curses, Medal Curses, or upgrades and the Quick Menu will remember when you usually get them.</p>}
             </section>
           </>}
