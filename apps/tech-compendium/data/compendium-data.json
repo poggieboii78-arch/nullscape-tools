@@ -167,9 +167,14 @@
               "loop": true
             }
           ]
+        },
+        {
+          "id": "section-msm6f423-rehai",
+          "kind": "separator",
+          "title": "intermediate techs"
         }
       ],
-      "updatedAt": "2026-08-09T16:46:01.010Z"
+      "updatedAt": "2026-08-09T19:09:35.473Z"
     },
     {
       "id": "class-msl0qnur-e8nfe",
