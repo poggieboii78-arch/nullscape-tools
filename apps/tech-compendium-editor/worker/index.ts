@@ -12,12 +12,23 @@ interface Env {
       };
     };
   };
+  ALLOWED_EMAILS?: string;
   ALLOWED_EMAIL?: string;
 }
 
 interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
   passThroughOnException(): void;
+}
+
+function getAllowedEmails(env: Env): Set<string> {
+  return new Set(
+    [env.ALLOWED_EMAILS, env.ALLOWED_EMAIL]
+      .filter((value): value is string => Boolean(value))
+      .flatMap((value) => value.split(","))
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  );
 }
 
 // Image security config. SVG sources with .svg extension auto-skip the
@@ -29,8 +40,8 @@ interface ExecutionContext {
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    const email = request.headers.get("cf-access-authenticated-user-email")?.toLowerCase();
-    if (!env.ALLOWED_EMAIL || email !== env.ALLOWED_EMAIL.toLowerCase()) {
+    const email = request.headers.get("cf-access-authenticated-user-email")?.trim().toLowerCase();
+    if (!email || !getAllowedEmails(env).has(email)) {
       return new Response("Forbidden", { status: 403, headers: { "cache-control": "no-store" } });
     }
 
