@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./calculator-link.css";
 
 :root { --bg:#09080d; --panel:#14111b; --panel2:#1a1524; --line:#30283d; --text:#f4eef9; --muted:#9c91a8; --purple:#b66dff; --blue:#66baff; }
 * { box-sizing:border-box; }

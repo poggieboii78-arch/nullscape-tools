@@ -134,7 +134,7 @@ function CurseCard({ curse, lockedReason, onPick, estimatedPrize }: { curse: Cur
 }
 
 export default function Home() {
-  const {run,update:updateRun,reset:resetShared}=useSharedRun(storageKey);
+  const {run,update:updateRun,reset:resetShared,applyLinkedRun}=useSharedRun(storageKey);
   const {level,difficulty,players,medalCurses:owned}=run;
   const selectedEnemies=useMemo(()=>new Set(Object.keys(run.enemies).filter(name=>run.enemies[name]>0).map(name=>name==="Kolóna"?"Kolona":name)),[run.enemies]);
   const razorbloom=(run.greaterCurses.Razorbloom??0)>0;
@@ -330,7 +330,7 @@ export default function Home() {
           <a href="https://nullscape.wiki/wiki/Medal" target="_blank" rel="noreferrer">Medal mechanics ↗</a>
         </footer>
       </div>
-      <RunDock run={run} update={updateRun} reset={reset} toolId="medal" toolSteps={[
+      <RunDock run={run} update={updateRun} reset={reset} applyLinkedRun={applyLinkedRun} toolId="medal" toolSteps={[
         {selector:"[data-tour='medal-progress']",title:"Medals and Medal Curses are different",text:"Beaconing a Medal gives Gifts. It only adds a Medal Curse choice when the destination intermission has a regular Curse shop; a Greater Curse shop can replace it and block that extra choice."},
         {selector:"[data-tour='medal-level-bubbles']",title:"Read the three-level timeline",text:"The first bubble is the pool being checked, the middle bubble is your next chance to collect a Medal, and the last bubble is the next intermission where that Medal can offer a Medal Curse."},
         {selector:"[data-tour='medal-pool']",title:"Sometimes regular Curses fill the choices",text:"The game wants three choices. If fewer than three difficult Medal Curses are eligible, normal Curses can fill the empty slots. They still behave like normal Curses, including their usual payout and Purification value."},

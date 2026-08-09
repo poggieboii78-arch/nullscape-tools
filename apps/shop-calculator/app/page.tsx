@@ -75,7 +75,7 @@ function price(upgrade:Upgrade,run:SharedRun){
 function nextShopLevel(level:number){let next=Math.max(3,level+1);while(![0,3,5,8].includes(next%10))next+=1;return next;}
 
 export default function Home(){
- const {run,update,reset}=useSharedRun("nullscape-shop-state-v1");
+ const {run,update,reset,applyLinkedRun}=useSharedRun("nullscape-shop-state-v1");
  const [selected,setSelected]=useState<string[]>([]);const [search,setSearch]=useState("");const [autoNextShop,setAutoNextShop]=useState(false);const locked=run.inputMode==="quick";
  useEffect(()=>{try{setAutoNextShop(localStorage.getItem("nullscape-shop-auto-next")==="1");}catch{}},[]);
  useEffect(()=>{try{localStorage.setItem("nullscape-shop-auto-next",autoNextShop?"1":"0");}catch{}},[autoNextShop]);
@@ -94,6 +94,6 @@ export default function Home(){
    <details className="rules"><summary>Pricing rules <span>＋</span></summary><p>Uses each upgrade's difficulty and stack costs, then scales by √players. Party+ divides prices by 1.125. Nothing? applies its 15% shop discount. Final prices round up.</p></details>
   </section>
   <footer><p>Data checked against the Nullscape Wiki and the original calculator by Sticks. <span className="llm-disclaimer">Made with help from an LLM.</span></p><a href="https://stickstetris.github.io/NullscapeShopCalculator/" target="_blank" rel="noreferrer">Original calculator ↗</a></footer>
-  <RunDock run={run} update={update} reset={resetTool} toolId="shop" toolSteps={[{selector:"[data-tour='shop-summary']",title:"Plan without losing track",text:"Your Golden Gifts, selected total, and remaining balance update together. Auto-next can jump straight to the next wiki-scheduled shop after buying."},{selector:"[data-tour='owned-upgrades']",title:"Match your inventory",text:"Owned stacks control prerequisites, prices for the next stack, and which upgrades can still appear. Hover an icon if you need its name."},{selector:"[data-tour='shop-grid']",title:"Preview the shop",text:"Only currently eligible upgrades are shown. Click choices to plan them, then Purchase to add them to the run."}]}/>
+  <RunDock run={run} update={update} reset={resetTool} applyLinkedRun={applyLinkedRun} toolId="shop" toolSteps={[{selector:"[data-tour='shop-summary']",title:"Plan without losing track",text:"Your Golden Gifts, selected total, and remaining balance update together. Auto-next can jump straight to the next wiki-scheduled shop after buying."},{selector:"[data-tour='owned-upgrades']",title:"Match your inventory",text:"Owned stacks control prerequisites, prices for the next stack, and which upgrades can still appear. Hover an icon if you need its name."},{selector:"[data-tour='shop-grid']",title:"Preview the shop",text:"Only currently eligible upgrades are shown. Click choices to plan them, then Purchase to add them to the run."}]}/>
  </main>;
 }
