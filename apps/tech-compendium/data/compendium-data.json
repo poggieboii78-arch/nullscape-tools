@@ -96,9 +96,80 @@
               "loop": false
             }
           ]
+        },
+        {
+          "id": "tech-msm04qpc-wl9b8",
+          "slug": "magnet-collection",
+          "title": "Magnet Collection",
+          "icon": "",
+          "summary": "Mostly for collecting gifts in Standard or Extreme",
+          "published": true,
+          "updatedAt": "2026-08-09T16:13:12.624Z",
+          "blocks": [
+            {
+              "id": "block-msm06dpm-g171l",
+              "type": "paragraph",
+              "content": "This tech is REALLY good for Collecting gifts in Standard and Extreme Because it lets you avoid tripmines and collect gifts at the same time!\n\nFundamentally its just a dive that is slightly offset to the right or left of a gift lane so that you don't touch the tripmines, but your gift collection range is high enough that you still collect the gifts.\n\nThis tech SHOULD be done using a Diver Bhop!\n\nPrerequisites:\nMin. x1 [[icon:Gift Magnet]] or any item that grants gift collection range (ex. [[icon:Miniature Hourglass]])\n[[icon:Ninja Belt]] (Optional)",
+              "url": "",
+              "caption": "",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msm0cflg-ymzla",
+              "type": "callout",
+              "content": "This tech can be done using a regular [[icon:Diver]] or a [[icon:Ninja Belt]] [[icon:Diver]]",
+              "url": "",
+              "caption": "",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msm0dlaq-d46qa",
+              "type": "video",
+              "content": "",
+              "url": "https://poggieboii78-arch.github.io/nullscape-tools/compendium/uploads/block-msm0dlaq-d46qa.mp4",
+              "caption": "Done Correctly",
+              "secondaryUrl": "",
+              "secondaryCaption": "Damn my shield :(",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msm18h51-elbup",
+              "type": "paragraph",
+              "content": "yeah thats kinda it..",
+              "url": "",
+              "caption": "",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msm18sze-dchvp",
+              "type": "video",
+              "content": "",
+              "url": "https://i.gyazo.com/8fa5ac659e12c35edffb8dea078aa788.gif",
+              "caption": "",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            }
+          ]
         }
       ],
-      "updatedAt": "2026-08-09T13:06:18.090Z"
+      "updatedAt": "2026-08-09T16:45:20.888Z"
     },
     {
       "id": "class-msl0qnur-e8nfe",
