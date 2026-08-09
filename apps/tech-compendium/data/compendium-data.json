@@ -172,9 +172,19 @@
           "id": "section-msm6f423-rehai",
           "kind": "separator",
           "title": "intermediate techs"
+        },
+        {
+          "id": "tech-msm7oiwc-2t7hk",
+          "slug": "tryna-find-one-son",
+          "title": "tryna find one son",
+          "icon": "",
+          "summary": "",
+          "published": true,
+          "updatedAt": "2026-08-09T19:44:32.940Z",
+          "blocks": []
         }
       ],
-      "updatedAt": "2026-08-09T19:09:35.473Z"
+      "updatedAt": "2026-08-09T19:46:32.478Z"
     },
     {
       "id": "class-msl0qnur-e8nfe",
