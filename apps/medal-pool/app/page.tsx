@@ -331,10 +331,10 @@ export default function Home() {
         </footer>
       </div>
       <RunDock run={run} update={updateRun} reset={reset} applyLinkedRun={applyLinkedRun} toolId="medal" toolSteps={[
-        {selector:"[data-tour='medal-progress']",title:"Medals and Medal Curses are different",text:"Beaconing a Medal gives Gifts. It only adds a Medal Curse choice when the destination intermission has a regular Curse shop; a Greater Curse shop can replace it and block that extra choice."},
-        {selector:"[data-tour='medal-level-bubbles']",title:"Read the three-level timeline",text:"The first bubble is the pool being checked, the middle bubble is your next chance to collect a Medal, and the last bubble is the next intermission where that Medal can offer a Medal Curse."},
-        {selector:"[data-tour='medal-pool']",title:"Sometimes regular Curses fill the choices",text:"The game wants three choices. If fewer than three difficult Medal Curses are eligible, normal Curses can fill the empty slots. They still behave like normal Curses, including their usual payout and Purification value."},
-        {selector:"[data-tour='eligible-cards']",title:"Read the eligible Medal Curse pool",text:"These cards use your level, permanent enemies, Greater Curses, and already-active Medal Curses from the Quick Menu. Picking a card records it and advances to the next possible pick."}
+        {selector:"[data-tour='medal-progress']",title:"A Medal is not the same as a Medal Curse",text:"Collecting a Medal always gives Gifts. You only get an extra Medal Curse choice if the later intermission has a normal Curse shop. A Greater Curse shop can replace it."},
+        {selector:"[data-tour='medal-level-bubbles']",title:"Follow the three bubbles",text:"Left: the Medal pool being checked. Middle: the level where you can collect the Medal. Right: the later intermission where its Medal Curse choice can appear."},
+        {selector:"[data-tour='medal-pool']",title:"Some choices can be regular Curses",text:"The game tries to offer three choices. If fewer than three difficult Medal Curses are possible, regular Curses may fill the empty spaces. Those still work and pay like normal Curses."},
+        {selector:"[data-tour='eligible-cards']",title:"See which Medal Curses are possible",text:"These cards use the run information in your Quick Menu. Click the Curse you picked to record it and move to the next possible Medal pick."}
       ]}/>
     </main>
   );

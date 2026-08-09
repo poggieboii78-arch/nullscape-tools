@@ -17,8 +17,8 @@ export default function Home(){
   const {run,update,reset,applyLinkedRun}=useSharedRun("nullscape-run-profile-v1");
   const query=useMemo(()=>buildRunQuery(run),[run]);
   const steps=useMemo(()=>[
-    {selector:"[data-tour='tool-cards'] .tool-card:first-child",title:"Choose a calculator",text:"Your newest Quick Menu data is carried into whichever tool you open."},
-    {selector:"[data-tour='reference-card']",title:"Browse the Compendium",text:"Guides and class tech live separately because they do not use your run data."},
+    {selector:"[data-tour='tool-cards'] .tool-card:first-child",title:"Choose the tool you need",text:"Open any calculator from these cards. Your Quick Menu information comes with you, so you do not need to enter the same run twice."},
+    {selector:"[data-tour='reference-card']",title:"Find guides in the Compendium",text:"The Tech Compendium contains class guides and techniques. It is separate from the calculators because it does not need your run information."},
   ],[]);
   return <main>
     <header className="site-header"><a className="brand" href="#top" aria-label="Nullscape Tools home"><span className="brand-glyph" aria-hidden="true">N</span><span>NULLSCAPE TOOLS</span></a><span className="header-status">RUN DATA LIVES IN THE QUICK MENU ↓</span></header>
