@@ -1,5 +1,5 @@
-import type { CompendiumData } from "../app/types";
-import { starterCompendium } from "../app/types";
+import type { CompendiumBlock, CompendiumData } from "../app/types";
+import { isCompendiumTech, starterCompendium } from "../app/types";
 
 type D1Like = {
   prepare(query: string): {
@@ -33,6 +33,10 @@ export async function ensureCompendiumSchema() {
       sort_order INTEGER NOT NULL DEFAULT 0, published INTEGER NOT NULL DEFAULT 1,
       updated_at TEXT NOT NULL
     )`),
+    d1.prepare(`CREATE TABLE IF NOT EXISTS tech_separators (
+      id TEXT PRIMARY KEY, class_id TEXT NOT NULL, title TEXT NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )`),
     d1.prepare(`CREATE TABLE IF NOT EXISTS blocks (
       id TEXT PRIMARY KEY, tech_id TEXT NOT NULL, type TEXT NOT NULL,
       content TEXT NOT NULL DEFAULT '', url TEXT NOT NULL DEFAULT '',
@@ -58,15 +62,16 @@ export async function loadCompendium(includeDrafts = false): Promise<CompendiumD
   await ensureCompendiumSchema();
   await seedIfEmpty();
   const d1 = await db();
-  const [classResult, techResult, blockResult] = await Promise.all([
+  const [classResult, techResult, separatorResult, blockResult] = await Promise.all([
     d1.prepare(`SELECT id, slug, name, icon, description, accent, published
       FROM classes ${includeDrafts ? "" : "WHERE published = 1"} ORDER BY sort_order, name`).all<Record<string, unknown>>(),
-    d1.prepare(`SELECT id, class_id, slug, title, icon, summary, published, updated_at
+    d1.prepare(`SELECT id, class_id, slug, title, icon, summary, sort_order, published, updated_at
       FROM techs ${includeDrafts ? "" : "WHERE published = 1"} ORDER BY sort_order, title`).all<Record<string, unknown>>(),
+    d1.prepare("SELECT id, class_id, title, sort_order FROM tech_separators ORDER BY sort_order, title").all<Record<string, unknown>>(),
     d1.prepare("SELECT id, tech_id, type, content, url, caption FROM blocks ORDER BY sort_order, id").all<Record<string, unknown>>(),
   ]);
 
-  const blocksByTech = new Map<string, CompendiumData["classes"][number]["techs"][number]["blocks"]>();
+  const blocksByTech = new Map<string, CompendiumBlock[]>();
   for (const row of blockResult.results ?? []) {
     const techId = String(row.tech_id);
     const list = blocksByTech.get(techId) ?? [];
@@ -77,16 +82,22 @@ export async function loadCompendium(includeDrafts = false): Promise<CompendiumD
     blocksByTech.set(techId, list);
   }
 
-  const techsByClass = new Map<string, CompendiumData["classes"][number]["techs"]>();
+  const itemsByClass = new Map<string, { order: number; item: CompendiumData["classes"][number]["techs"][number] }[]>();
   for (const row of techResult.results ?? []) {
     const classId = String(row.class_id);
-    const list = techsByClass.get(classId) ?? [];
-    list.push({
-      id: String(row.id), slug: String(row.slug), title: String(row.title), icon: String(row.icon ?? ""),
+    const list = itemsByClass.get(classId) ?? [];
+    list.push({ order: Number(row.sort_order), item: {
+      id: String(row.id), kind: "tech", slug: String(row.slug), title: String(row.title), icon: String(row.icon ?? ""),
       summary: String(row.summary ?? ""), published: Boolean(row.published),
       updatedAt: String(row.updated_at), blocks: blocksByTech.get(String(row.id)) ?? [],
-    });
-    techsByClass.set(classId, list);
+    } });
+    itemsByClass.set(classId, list);
+  }
+  for (const row of separatorResult.results ?? []) {
+    const classId = String(row.class_id);
+    const list = itemsByClass.get(classId) ?? [];
+    list.push({ order: Number(row.sort_order), item: { id: String(row.id), kind: "separator", title: String(row.title) } });
+    itemsByClass.set(classId, list);
   }
 
   return {
@@ -95,7 +106,7 @@ export async function loadCompendium(includeDrafts = false): Promise<CompendiumD
     classes: (classResult.results ?? []).map((row) => ({
       id: String(row.id), slug: String(row.slug), name: String(row.name), icon: String(row.icon),
       description: String(row.description ?? ""), accent: String(row.accent ?? "#7770ff"),
-      published: Boolean(row.published), techs: techsByClass.get(String(row.id)) ?? [],
+      published: Boolean(row.published), techs: (itemsByClass.get(String(row.id)) ?? []).sort((a, b) => a.order - b.order).map(({ item }) => item),
     })),
   };
 }
@@ -106,6 +117,7 @@ export async function saveCompendium(data: CompendiumData, ensure = true) {
   const statements: unknown[] = [
     d1.prepare("DELETE FROM blocks"),
     d1.prepare("DELETE FROM techs"),
+    d1.prepare("DELETE FROM tech_separators"),
     d1.prepare("DELETE FROM classes"),
   ];
   data.classes.forEach((item, classIndex) => {
@@ -114,6 +126,12 @@ export async function saveCompendium(data: CompendiumData, ensure = true) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
       .bind(item.id, item.slug, item.name, item.icon, item.description, item.accent, classIndex, item.published ? 1 : 0));
     item.techs.forEach((tech, techIndex) => {
+      if (!isCompendiumTech(tech)) {
+        statements.push(d1.prepare(`INSERT INTO tech_separators
+          (id, class_id, title, sort_order) VALUES (?, ?, ?, ?)`)
+          .bind(tech.id, item.id, tech.title, techIndex));
+        return;
+      }
       statements.push(d1.prepare(`INSERT INTO techs
         (id, class_id, slug, title, icon, summary, sort_order, published, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
