@@ -14,7 +14,7 @@ const altarIcon="https://nullscape.wiki/wiki/Special:Redirect/file/MoreAltars.pn
 const shopIcon="https://nullscape.wiki/wiki/Special:Redirect/file/BusinessLicense.png";
 
 export default function Home(){
-  const {run,update,reset}=useSharedRun("nullscape-run-profile-v1");
+  const {run,update,reset,applyLinkedRun}=useSharedRun("nullscape-run-profile-v1");
   const query=useMemo(()=>buildRunQuery(run),[run]);
   const steps=useMemo(()=>[
     {selector:"[data-tour='tool-cards'] .tool-card:first-child",title:"Choose a calculator",text:"Your newest Quick Menu data is carried into whichever tool you open."},
@@ -40,6 +40,6 @@ export default function Home(){
       </section>
     </div>
     <footer><span>NULLSCAPE TOOLS</span><span>Settings save on this device · Unofficial fan project · Made with help from an LLM.</span></footer>
-    <RunDock run={run} update={update} reset={reset} toolId="home" toolSteps={steps}/>
+    <RunDock run={run} update={update} reset={reset} applyLinkedRun={applyLinkedRun} toolId="home" toolSteps={steps}/>
   </main>;
 }

@@ -1,6 +1,9 @@
 "use client";
 
+/* eslint-disable react-hooks/set-state-in-effect */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CalculatorLink } from "./calculator-link";
 
 export type Difficulty = "casual" | "standard" | "extreme";
 export type Party = "solo" | "duo" | "party" | "party-plus";
@@ -155,14 +158,15 @@ export function useSharedRun(legacyKey:string){
     const cookie=readCookie();if(cookie)candidates.push(cookie);const legacy=legacyRun(legacyKey);if(legacy)candidates.push(legacy);
     try{const packed=new URLSearchParams(location.search).get("run");if(packed)candidates.push(normalize(JSON.parse(packed)));}catch{}
     const newest=candidates.sort((a,b)=>b.updatedAt-a.updatedAt)[0]??defaultSharedRun;latest.current=newest.updatedAt;setRun(newest);persist(newest);setReady(true);
-    if(new URLSearchParams(location.search).has("run"))history.replaceState({},"",location.pathname);
+    if(new URLSearchParams(location.search).has("run"))history.replaceState({},"",`${location.pathname}${location.hash}`);
     const onStorage=(event:StorageEvent)=>{if(event.key===storageKey&&event.newValue)try{accept(normalize(JSON.parse(event.newValue)));}catch{}};
     const check=()=>accept(readCookie());window.addEventListener("storage",onStorage);window.addEventListener("focus",check);document.addEventListener("visibilitychange",check);const timer=window.setInterval(check,900);
     return()=>{window.removeEventListener("storage",onStorage);window.removeEventListener("focus",check);document.removeEventListener("visibilitychange",check);clearInterval(timer);};
   },[accept,legacyKey]);
   const update=useCallback((change:Partial<SharedRun>|((current:SharedRun)=>Partial<SharedRun>))=>setRun(current=>{let patch=typeof change==="function"?change(current):change;const nextParty=patch.party??current.party;if((current.party==="solo"||current.party==="duo")&&(nextParty==="party"||nextParty==="party-plus")){const upgrades={...current.upgrades,...(patch.upgrades??{})};const paycheck=upgrades.Paycheck??0;if(paycheck>1)upgrades.Paycheck=paycheck-1;else delete upgrades.Paycheck;patch={...patch,upgrades};}const next=normalize({...current,...patch,updatedAt:Math.max(Date.now(),current.updatedAt+1)});recordActivity(current,next);latest.current=next.updatedAt;persist(next);return next;}),[]);
+  const applyLinkedRun=useCallback((candidate:SharedRun)=>setRun(current=>{const next=normalize({...candidate,inputMode:current.inputMode,updatedAt:Math.max(Date.now(),current.updatedAt+1)});latest.current=next.updatedAt;persist(next);return next;}),[]);
   const reset=useCallback(()=>{update(current=>{archiveCurrentRun(current);clearCurrentActivity();return{...defaultSharedRun,players:current.players,difficulty:current.difficulty,party:current.party,inputMode:current.inputMode,upgrades:(current.party==="solo"||current.party==="duo"?{Paycheck:1}:{}) as StackMap};});},[update]);
-  return {run,update,reset,ready};
+  return {run,update,reset,applyLinkedRun,ready};
 }
 
 function useActivityState(){
@@ -201,8 +205,8 @@ type TourStep={selector:string;title:string;text:string};
 type DockTab="run"|"enemies"|"curses"|"medal"|"greater"|"upgrades";
 const tabLabels:Record<DockTab,string>={run:"Run Data",enemies:"Enemies",curses:"Curses",medal:"Medal Curses",greater:"Greater",upgrades:"Upgrades"};
 
-export function RunDock({run,update,reset,toolId,toolSteps=[]}:{run:SharedRun;update:(change:Partial<SharedRun>|((current:SharedRun)=>Partial<SharedRun>))=>void;reset:()=>void;toolId:string;toolSteps?:TourStep[]}){
-  const [open,setOpen]=useState(false);const [tab,setTab]=useState<DockTab>("run");const [search,setSearch]=useState("");const [checkPossible,setCheckPossible]=useState(true);const [tour,setTour]=useState(-1);const [historyOpen,setHistoryOpen]=useState(false);const [focusRect,setFocusRect]=useState<{left:number;top:number;width:number;height:number}|null>(null);const seenKey=`nullscape-tour-seen-${toolId}-v8`;const activity=useActivityState();const archives=useArchiveState();
+export function RunDock({run,update,reset,applyLinkedRun,toolId,toolSteps=[]}:{run:SharedRun;update:(change:Partial<SharedRun>|((current:SharedRun)=>Partial<SharedRun>))=>void;reset:()=>void;applyLinkedRun:(run:SharedRun)=>void;toolId:string;toolSteps?:TourStep[]}){
+  const [open,setOpen]=useState(false);const [tab,setTab]=useState<DockTab>("run");const [search,setSearch]=useState("");const [checkPossible,setCheckPossible]=useState(true);const [tour,setTour]=useState(-1);const [historyOpen,setHistoryOpen]=useState(false);const [linkActive,setLinkActive]=useState(false);const [focusRect,setFocusRect]=useState<{left:number;top:number;width:number;height:number}|null>(null);const seenKey=`nullscape-tour-seen-${toolId}-v9`;const activity=useActivityState();const archives=useArchiveState();
   const steps=useMemo<TourStep[]>(()=>[
     ...(toolId==="home"?[
       {selector:"[data-tour='dock-handle']",title:"Your run follows you",text:"Open the Quick Menu here. The newest edit wins if the site is open in more than one tab."},
@@ -232,7 +236,7 @@ export function RunDock({run,update,reset,toolId,toolSteps=[]}:{run:SharedRun;up
     <aside className={`run-dock ${open?"open":""}`}>
       <button className="run-dock-handle" data-tour="dock-handle" onClick={()=>setOpen(value=>!value)} aria-label={open?"Close Quick Menu":"Open Quick Menu"}><span aria-hidden="true">{open?"⌄":"⌃"}</span></button>
       <div className="run-dock-body" data-tour="dock-body">
-        <div className="dock-top"><div><strong>Quick Menu</strong><span>Newest edit wins across open tabs</span></div><div className="dock-actions"><button onClick={()=>setTour(0)}>Walkthrough</button><button className="reset-run" onClick={reset}>Reset run</button></div></div>
+        <div className="dock-top"><div><strong>Quick Menu</strong><span>Newest edits sync across tabs and linked friends</span></div><div className="dock-actions"><CalculatorLink run={run} applyRun={applyLinkedRun} onActiveChange={setLinkActive}/><button onClick={()=>setTour(0)}>Walkthrough</button><button className="reset-run" onClick={()=>{if(!linkActive||confirm("Reset the shared run for everyone in this Calculator Link?"))reset();}}>Reset run</button></div></div>
         <div className="input-mode"><span>EDIT FROM</span>{([['quick','Quick menu'],['both','Both'],['tool','Tool page']] as [InputMode,string][]).map(([mode,label])=><button key={mode} className={run.inputMode===mode?"active":""} onClick={()=>update({inputMode:mode})}>{label}</button>)}</div>
         <div className="dock-tab-row"><nav className="dock-tabs" aria-label="Quick Menu sections">{(Object.keys(tabLabels) as DockTab[]).map(item=><button key={item} className={tab===item?"active":""} onClick={()=>{setTab(item);setSearch("");}}>{tabLabels[item]}<small>{item==="enemies"?total(run.enemies):item==="curses"?total(run.curses):item==="medal"?total(run.medalCurses):item==="greater"?total(run.greaterCurses):item==="upgrades"?total(run.upgrades):""}</small></button>)}</nav><button className={`dock-next-level ${(expectedEnemies===0||currentEnemyCount>=expectedEnemies)&&currentCurseCount>0?"ready":""}`} disabled={run.inputMode==="tool"} onClick={()=>update({level:run.level+1})} title={`Advance from Level ${run.level} to Level ${run.level+1}. Recorded here: ${currentEnemyCount} enemies and ${currentCurseCount} Curse picks.`} aria-label={`Next intermission, Level ${run.level+1}`}><span>NEXT</span><b>→ L{run.level+1}</b></button></div>
         <div className={`dock-content ${quickLocked?"quick-locked":""}`}>

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./calculator-link.css";
 
 :root {
   --ink: #f4efff;
