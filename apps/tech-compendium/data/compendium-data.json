@@ -121,7 +121,7 @@
             {
               "id": "block-msm0cflg-ymzla",
               "type": "callout",
-              "content": "This tech can be done using a regular [[icon:Diver]] or a [[icon:Ninja Belt]] [[icon:Diver]]",
+              "content": "This tech can be done using a regular Dive [[icon:Diver]] or a [[icon:Ninja Belt]] Dive",
               "url": "",
               "caption": "",
               "secondaryUrl": "",
@@ -169,7 +169,7 @@
           ]
         }
       ],
-      "updatedAt": "2026-08-09T16:45:20.888Z"
+      "updatedAt": "2026-08-09T16:46:01.010Z"
     },
     {
       "id": "class-msl0qnur-e8nfe",
