@@ -1,6 +1,6 @@
 import source from "../data/compendium-data.json";
 
-export type BlockType = "heading" | "paragraph" | "steps" | "callout" | "video" | "image" | "metronome";
+export type BlockType = "heading" | "paragraph" | "steps" | "callout" | "video" | "video-comparison" | "image" | "metronome";
 
 export type CompendiumBlock = {
   id: string;
@@ -8,6 +8,8 @@ export type CompendiumBlock = {
   content: string;
   url: string;
   caption: string;
+  secondaryUrl?: string;
+  secondaryCaption?: string;
   bpm?: number;
   countIn?: number;
   loop?: boolean;

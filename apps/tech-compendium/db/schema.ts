@@ -30,5 +30,7 @@ export const blocks = sqliteTable("blocks", {
   content: text("content").notNull().default(""),
   url: text("url").notNull().default(""),
   caption: text("caption").notNull().default(""),
+  secondaryUrl: text("secondary_url").notNull().default(""),
+  secondaryCaption: text("secondary_caption").notNull().default(""),
   sortOrder: integer("sort_order").notNull().default(0),
 });

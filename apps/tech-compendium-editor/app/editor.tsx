@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { BlockType, CompendiumBlock, CompendiumClass, CompendiumData, CompendiumTech, CompendiumTechItem, CompendiumTechSeparator } from "./types";
 import { isCompendiumTech, starterCompendium } from "./types";
 
-const blockNames: Record<BlockType, string> = { heading: "Heading", paragraph: "Paragraph", steps: "Numbered steps", callout: "Callout", video: "Video", image: "Image", metronome: "Input metronome" };
+const blockNames: Record<BlockType, string> = { heading: "Heading", paragraph: "Paragraph", steps: "Numbered steps", callout: "Callout", video: "Video", "video-comparison": "Video comparison", image: "Image", metronome: "Input metronome" };
 const blockTypes = Object.keys(blockNames) as BlockType[];
 const makeId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "untitled";
@@ -170,7 +170,7 @@ export default function Editor() {
   }
   function addBlock(type: BlockType) {
     if (!activeTech) return;
-    const block: CompendiumBlock = { id: makeId("block"), type, content: type === "steps" ? "First step\nSecond step" : type === "metronome" ? "Shift + W\nM1\nSpace + M2\nWait" : "", url: "", caption: type === "metronome" ? "Practice the sequence in time" : "", bpm: 90, countIn: 4, loop: true };
+    const block: CompendiumBlock = { id: makeId("block"), type, content: type === "steps" ? "First step\nSecond step" : type === "metronome" ? "Shift + W\nM1\nSpace + M2\nWait" : "", url: "", caption: type === "metronome" ? "Practice the sequence in time" : type === "video-comparison" ? "Left" : "", secondaryUrl: "", secondaryCaption: type === "video-comparison" ? "Right" : "", bpm: 90, countIn: 4, loop: true };
     replaceTech({ ...activeTech, blocks: [...activeTech.blocks, block] });
   }
   function updateBlock(id: string, values: Partial<CompendiumBlock>) { if (activeTech) replaceTech({ ...activeTech, blocks: activeTech.blocks.map((item) => item.id === id ? { ...item, ...values } : item) }); }
@@ -189,18 +189,19 @@ export default function Editor() {
     finally { setUploading(""); }
   }
 
-  async function uploadVideo(file: File, block: CompendiumBlock) {
+  async function uploadVideo(file: File, block: CompendiumBlock, side: "single" | "left" | "right" = "single") {
     if (!["video/mp4", "video/webm", "video/ogg"].includes(file.type)) { setStatus("error"); setMessage("Choose an MP4, WebM, or Ogg video."); return; }
     if (file.size > 15 * 1024 * 1024) { setStatus("error"); setMessage("Videos must be 15 MB or smaller. Use YouTube for longer clips."); return; }
-    setUploadingVideo(block.id); setMessage("Uploading video…");
+    const uploadId = side === "single" ? block.id : `${block.id}-${side}`;
+    setUploadingVideo(uploadId); setMessage("Uploading video…");
     try {
       const form = new FormData();
       form.set("video", file);
-      form.set("blockId", block.id);
+      form.set("blockId", uploadId);
       const response = await fetch("/api/media", { method: "POST", body: form });
       const payload = await readJson(response);
       if (!response.ok) throw new Error(payload.error || `Video upload failed (${response.status}).`);
-      updateBlock(block.id, { url: payload.url });
+      updateBlock(block.id, side === "right" ? { secondaryUrl: payload.url } : { url: payload.url });
       setMessage("Video uploaded — publish the tech when ready");
     } catch (error) {
       setStatus("error");
@@ -268,6 +269,22 @@ export default function Editor() {
             {(block.type === "heading" || block.type === "paragraph" || block.type === "steps" || block.type === "callout") && <label><span>{block.type === "steps" ? "One step per line" : blockNames[block.type]}</span><textarea rows={block.type === "paragraph" || block.type === "steps" ? 5 : 3} value={block.content} onChange={(e) => updateBlock(block.id, { content: e.target.value })} /></label>}
             {block.type === "image" && <><label><span>Image URL</span><input type="url" value={block.url} placeholder="https://…" onChange={(e) => updateBlock(block.id, { url: e.target.value })} /></label><label><span>Caption / description</span><input value={block.caption} onChange={(e) => updateBlock(block.id, { caption: e.target.value })} /></label></>}
             {block.type === "video" && <><label><span>YouTube or direct video URL</span><input type="url" value={block.url} placeholder="https://…" onChange={(e) => updateBlock(block.id, { url: e.target.value })} /></label><div className="video-upload-row"><label className={`upload-button ${uploadingVideo === block.id ? "uploading" : ""}`}><input type="file" accept="video/mp4,video/webm,video/ogg" disabled={uploadingVideo === block.id} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadVideo(file, block); e.target.value = ""; }} />{uploadingVideo === block.id ? "Uploading…" : "Upload video file"}</label><small>MP4, WebM, or Ogg · up to 15 MB. YouTube is still best for longer videos.</small></div><label><span>Caption / description</span><input value={block.caption} onChange={(e) => updateBlock(block.id, { caption: e.target.value })} /></label></>}
+            {block.type === "video-comparison" && <div className="comparison-fields">
+              <label className="comparison-title"><span>Comparison title (optional)</span><input value={block.content} placeholder="Before and after" onChange={(e) => updateBlock(block.id, { content: e.target.value })} /></label>
+              {(["left", "right"] as const).map((side) => {
+                const right = side === "right";
+                const uploadId = `${block.id}-${side}`;
+                const url = right ? block.secondaryUrl ?? "" : block.url;
+                const label = right ? block.secondaryCaption ?? "" : block.caption;
+                return <section className="comparison-side" key={side}>
+                  <div className="comparison-side-heading"><b>{right ? "Right video" : "Left video"}</b><span>{right ? "B" : "A"}</span></div>
+                  <label><span>YouTube or direct video URL</span><input type="url" value={url} placeholder="https://…" onChange={(e) => updateBlock(block.id, right ? { secondaryUrl: e.target.value } : { url: e.target.value })} /></label>
+                  <div className="video-upload-row"><label className={`upload-button ${uploadingVideo === uploadId ? "uploading" : ""}`}><input type="file" accept="video/mp4,video/webm,video/ogg" disabled={uploadingVideo === uploadId} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadVideo(file, block, side); e.target.value = ""; }} />{uploadingVideo === uploadId ? "Uploading…" : "Upload video file"}</label></div>
+                  <label><span>Label</span><input value={label} placeholder={right ? "After" : "Before"} onChange={(e) => updateBlock(block.id, right ? { secondaryCaption: e.target.value } : { caption: e.target.value })} /></label>
+                </section>;
+              })}
+              <small className="comparison-help">Each side accepts YouTube, a direct URL, or an MP4/WebM/Ogg upload up to 15 MB.</small>
+            </div>}
             {block.type === "metronome" && <div className="metronome-fields">
               <label className={hasMillisecondDelay(block.content) ? "timing-disabled" : ""}><span>BPM</span><input type="number" min="20" max="300" disabled={hasMillisecondDelay(block.content)} value={block.bpm ?? 90} onChange={(e) => updateBlock(block.id, { bpm: Math.max(20, Math.min(300, Number(e.target.value) || 90)) })} /><small>{hasMillisecondDelay(block.content) ? "Ignored — explicit ms timing is active." : "Used when no ms delay is present."}</small></label>
               <label><span>Start countdown</span><select value={block.countIn ?? 4} onChange={(e) => updateBlock(block.id, { countIn: Number(e.target.value) })}><option value="0">Disabled</option><option value="2">2 beats</option><option value="4">4 beats</option><option value="8">8 beats</option></select></label>

@@ -40,6 +40,14 @@ function videoSource(value: string) {
   return { kind: "video", src: safe };
 }
 
+function VideoMedia({ url, title }: { url: string; title: string }) {
+  const source = videoSource(url);
+  if (!source.src) return null;
+  return source.kind === "embed"
+    ? <iframe src={source.src} title={title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+    : <video src={source.src} controls preload="metadata" />;
+}
+
 function Keycap({ label, active }: { label: string; active: boolean }) {
   const mouse = /^(m1|lmb|mouse1)$/i.test(label) ? "◖" : /^(m2|rmb|mouse2)$/i.test(label) ? "◗" : "";
   const text = mouse ? label.toUpperCase().replace("MOUSE", "M") : label;
@@ -152,6 +160,18 @@ function Block({ block }: { block: CompendiumBlock }) {
     const source = videoSource(block.url);
     if (!source.src) return null;
     return <figure className="media-card video-card">{source.kind === "embed" ? <iframe src={source.src} title={block.caption || "Tech video"} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <video src={source.src} controls preload="metadata" />}<figcaption>{block.caption}</figcaption></figure>;
+  }
+  if (block.type === "video-comparison") {
+    const left = videoSource(block.url);
+    const right = videoSource(block.secondaryUrl ?? "");
+    if (!left.src && !right.src) return null;
+    return <section className="video-comparison-card">
+      {block.content && <h3>{block.content}</h3>}
+      <div className="video-comparison-grid">
+        {left.src && <figure><span>{block.caption || "Left"}</span><VideoMedia url={block.url} title={block.caption || "Left comparison video"} /></figure>}
+        {right.src && <figure><span>{block.secondaryCaption || "Right"}</span><VideoMedia url={block.secondaryUrl ?? ""} title={block.secondaryCaption || "Right comparison video"} /></figure>}
+      </div>
+    </section>;
   }
   if (block.type === "metronome") return <InputMetronome block={block} />;
   return null;
