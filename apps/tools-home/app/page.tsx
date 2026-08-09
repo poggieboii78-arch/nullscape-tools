@@ -18,19 +18,24 @@ export default function Home(){
   const query=useMemo(()=>buildRunQuery(run),[run]);
   const steps=useMemo(()=>[
     {selector:"[data-tour='tool-cards'] .tool-card:first-child",title:"Choose a calculator",text:"Your newest Quick Menu data is carried into whichever tool you open."},
-    {selector:"[data-tour='tool-cards'] .tool-card:last-child",title:"Come back any time",text:"Every tool returns here without clearing the run. Use Walkthrough in the Quick Menu whenever you want this guide again."},
+    {selector:"[data-tour='reference-card']",title:"Browse the Compendium",text:"Guides and class tech live separately because they do not use your run data."},
   ],[]);
   return <main>
     <header className="site-header"><a className="brand" href="#top" aria-label="Nullscape Tools home"><span className="brand-glyph" aria-hidden="true">N</span><span>NULLSCAPE TOOLS</span></a><span className="header-status">RUN DATA LIVES IN THE QUICK MENU ↓</span></header>
     <div className="shell" id="top">
       <section className="intro"><p className="eyebrow">RUN TOOLS</p><h1>Useful stuff.<br/><span>No clutter.</span></h1><p className="lede">Open the Quick Menu once, set the run, and every tool uses the newest version.</p></section>
       <section className="tools" aria-labelledby="tools-heading" data-tour="tool-cards">
-        <div className="section-heading"><div><p className="eyebrow">AVAILABLE NOW</p><h2 id="tools-heading">Pick a tool</h2></div><span>4 TOOLS</span></div>
+        <div className="section-heading"><div><p className="eyebrow">RUN TOOLS</p><h2 id="tools-heading">Pick a calculator</h2></div><span>3 TOOLS</span></div>
         <div className="tool-list">
           <a className="tool-card" href={`${checkerUrl}?${query}`}><span className="tool-icon"><img src={medalIcon} alt="Medal Curse icon"/></span><span className="tool-copy"><span className="tool-kicker">RUN PLANNER</span><strong>Medal Pool Checker</strong><span>See eligible Medal Curses from your level, enemies, and active curses.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
           <a className="tool-card altar-card" href={`${altarUrl}?${query}`}><span className="tool-icon"><img src={altarIcon} alt="More Altars icon"/></span><span className="tool-copy"><span className="tool-kicker">PRICE + ODDS</span><strong>Altar Calculator</strong><span>Check Protection, Purification priority, and possible Chance outcomes.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
           <a className="tool-card shop-card" href={`${shopUrl}?${query}`}><span className="tool-icon"><img src={shopIcon} alt="Business License icon"/></span><span className="tool-copy"><span className="tool-kicker">UPGRADE PLANNER</span><strong>Shop Calculator</strong><span>See eligible upgrades, exact stack prices, prerequisites, and plan purchases.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
-          <a className="tool-card" href={compendiumUrl}><span className="tool-icon" aria-hidden="true">✦</span><span className="tool-copy"><span className="tool-kicker">CLASS KNOWLEDGE</span><strong>Tech Compendium</strong><span>Browse Nullscape class tricks, setups, input sequences, and reminders.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
+        </div>
+      </section>
+      <section className="resources" aria-labelledby="resources-heading">
+        <div className="section-heading"><div><p className="eyebrow">GUIDES &amp; REFERENCES</p><h2 id="resources-heading">Learn the game</h2></div><span>1 GUIDE</span></div>
+        <div className="resource-list">
+          <a className="tool-card resource-card" href={compendiumUrl} data-tour="reference-card"><span className="tool-icon" aria-hidden="true">✦</span><span className="tool-copy"><span className="tool-kicker">CLASS KNOWLEDGE</span><strong>Tech Compendium</strong><span>Browse Nullscape class tricks, setups, input sequences, and reminders.</span></span><span className="launch" aria-hidden="true">BROWSE <b>↗</b></span></a>
         </div>
       </section>
     </div>
