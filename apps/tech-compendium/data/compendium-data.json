@@ -138,16 +138,28 @@
           "slug": "some-tech-idk",
           "title": "Some tech idk",
           "icon": "",
-          "summary": "Infinite Double Jumps",
+          "summary": "Infinite Double Jumps!",
           "published": true,
           "updatedAt": "2026-08-09T12:03:27.655Z",
           "blocks": [
             {
               "id": "block-mslrc2vu-f54bp",
-              "type": "heading",
-              "content": "Hello",
+              "type": "paragraph",
+              "content": "This is a Late Game (LVL 20+) Tech, You will need [[icon:Miniature Hourglass]] for this.\n\nThis is very easy to learn Tech, and the way it works is just:\n",
               "url": "",
               "caption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msls1hxg-ix9s9",
+              "type": "steps",
+              "content": "Jump\nAfter reaching the Peak Height of the jump, Place your Statue\nTeleport back as soon as you can, then Immediately jump",
+              "url": "",
+              "caption": "",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
               "bpm": 90,
               "countIn": 4,
               "loop": true
