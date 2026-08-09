@@ -220,7 +220,7 @@
         {
           "id": "section-mslr5l8c-g57wq",
           "kind": "separator",
-          "title": "Techs"
+          "title": "Simple Techs"
         },
         {
           "id": "tech-mslr7k87-kye6s",
@@ -266,9 +266,44 @@
               "loop": true
             }
           ]
+        },
+        {
+          "id": "tech-msmb3jp3-ur99w",
+          "slug": "slingshot",
+          "title": "Slingshot",
+          "icon": "",
+          "summary": "Fling yourself across the map",
+          "published": true,
+          "updatedAt": "2026-08-09T21:20:12.663Z",
+          "blocks": [
+            {
+              "id": "block-msmb44og-crv6p",
+              "type": "paragraph",
+              "content": "This tech is the best way of traversing across the entire map in seconds\nIt's self explanitory, you just fling yourself across the map with your Alt-Ability.\n\nBut here's some tips:\n\nWatch out as to not go too far into the Void, if you're in spirit form and touch the void you'll still die.\nWatch your energy bar, if it runs out too early you might not expect it and panic, or simply get into a bad situation.\n\nTo do a slingshot, simply:",
+              "url": "",
+              "caption": "",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            },
+            {
+              "id": "block-msmb7gug-hvqpj",
+              "type": "steps",
+              "content": "Press your Alt-Ability button somewhere on solid ground\nGo far away into the opposite direction you want to go\nPress your Ability button",
+              "url": "",
+              "caption": "",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            }
+          ]
         }
       ],
-      "updatedAt": "2026-08-09T21:20:19.796Z"
+      "updatedAt": "2026-08-09T21:32:28.919Z"
     },
     {
       "id": "class-msl0qzqz-wfdmj",
