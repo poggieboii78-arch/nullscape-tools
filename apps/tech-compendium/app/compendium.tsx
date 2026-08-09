@@ -67,6 +67,16 @@ const classDescriptions: Record<string, string> = {
   Prisoner: "A challenge class with restricted upgrades and extra Tripcoin rewards.",
 };
 
+const ninjaBeltDescriptions: Record<string, string> = {
+  Charger: "Allows a long jump out of a charge. For a short time after landing, you can immediately begin another charge; air-platform charging is also improved.",
+  Diver: "Unlocks Alt-Ability: a speed-scaled dive that preserves more momentum for much faster movement.",
+  Spirit: "Press Alt-Ability while spirited to teleport your body to the spirit. Adds 10 seconds of spirit time and makes it drain slightly slower.",
+  Grappler: "Hold Ability again or hold Alt-Ability while grappling to reel yourself into the attached platform.",
+  Glider: "Jumping no longer cancels your glide and gives you a boost; gliding speed is also increased slightly.",
+  Wanted: "Ninja Belt has no class effect for Wanted.",
+  Prisoner: "Ninja Belt has no class effect for Prisoner.",
+};
+
 const sharkTailDescriptions: Record<string, string> = {
   Charger: "Press Ability or Alt Ability during a charge to convert charge momentum upward.",
   Diver: "Press Ability or Alt Ability during a dive to cancel it and redirect the momentum upward.",
@@ -89,7 +99,7 @@ const miniatureHourglassDescriptions: Record<string, string> = {
 
 function iconDescription(name: string, activeClass?: CompendiumClass) {
   const className = activeClass?.name ?? "This class";
-  if (name === "Ninja Belt") return `${className}: unlocks its class-specific Ninja Belt ability upgrade.`;
+  if (name === "Ninja Belt") return ninjaBeltDescriptions[className] ?? `${className}: unlocks its class-specific Ninja Belt ability upgrade.`;
   if (name === "Shark Tail") return sharkTailDescriptions[className] ?? `${className}: unlocks its stronger class-specific movement technique.`;
   if (name === "Miniature Hourglass") return miniatureHourglassDescriptions[className] ?? `${className}: grants its class-specific Miniature Hourglass buff.`;
   if (name.toLowerCase() === activeClass?.name.toLowerCase()) return activeClass.description || classDescriptions[name] || `${name} class.`;
