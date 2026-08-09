@@ -77,11 +77,21 @@ const sharkTailDescriptions: Record<string, string> = {
   Prisoner: "Shark Tail has no class effect for Prisoner.",
 };
 
+const miniatureHourglassDescriptions: Record<string, string> = {
+  Charger: "Reduces Charge cooldown by 50% and makes Alt-Ability air platforms last 40% longer.",
+  Diver: "Powered (Alt-Ability) dives gain 1.25× Gift pickup range until you touch the ground.",
+  Spirit: "Keeps your statue frozen in place even without ground beneath it, almost removes the distance stamina penalty, and halves Ninja Belt relocation cooldown.",
+  Grappler: "Increases grapple recharge rate by 30%.",
+  Glider: "Increases glide recharge rate.",
+  Wanted: "Miniature Hourglass has no class effect for Wanted.",
+  Prisoner: "Miniature Hourglass has no class effect for Prisoner.",
+};
+
 function iconDescription(name: string, activeClass?: CompendiumClass) {
   const className = activeClass?.name ?? "This class";
   if (name === "Ninja Belt") return `${className}: unlocks its class-specific Ninja Belt ability upgrade.`;
   if (name === "Shark Tail") return sharkTailDescriptions[className] ?? `${className}: unlocks its stronger class-specific movement technique.`;
-  if (name === "Miniature Hourglass") return `${className}: grants its late-game class-specific Hourglass buff.`;
+  if (name === "Miniature Hourglass") return miniatureHourglassDescriptions[className] ?? `${className}: grants its class-specific Miniature Hourglass buff.`;
   if (name.toLowerCase() === activeClass?.name.toLowerCase()) return activeClass.description || classDescriptions[name] || `${name} class.`;
   return upgradeDescriptions[name] || classDescriptions[name] || `${name} icon.`;
 }
