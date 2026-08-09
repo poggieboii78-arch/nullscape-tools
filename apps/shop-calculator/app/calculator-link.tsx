@@ -8,11 +8,13 @@ import type { SharedRun, StackMap } from "./run-dock";
 type Credentials={room:string;password:string};
 type LinkStatus="off"|"joining"|"waiting"|"connected"|"offline"|"error";
 type SessionCache={version:1;credentials:Credentials;snapshot?:SharedRun};
+type DiscoveryMessage={type:"request";sender:string}|{type:"session";sender:string;target?:string;credentials:Credentials};
 type YModule=typeof import("yjs");
 type ApplyRun=(run:SharedRun)=>void;
 
 const cacheKey="nullscape-calculator-link-v1";
 const hashKey="calculator-link";
+const discoveryChannelName="nullscape-calculator-link-discovery-v1";
 const scalarKeys=["level","players","difficulty","party","gifts"] as const;
 const stackKeys=["enemies","curses","medalCurses","greaterCurses","upgrades"] as const;
 
@@ -75,13 +77,13 @@ async function copyText(value:string){
 
 export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;applyRun:ApplyRun;onActiveChange?:(active:boolean)=>void}){
   const [open,setOpen]=useState(false);const [status,setStatus]=useState<LinkStatus>("off");const [peers,setPeers]=useState(0);const [hasSnapshot,setHasSnapshot]=useState(false);const [joinValue,setJoinValue]=useState("");const [message,setMessage]=useState("");const [credentials,setCredentials]=useState<Credentials|null>(null);
-  const runRef=useRef(run);const credentialsRef=useRef<Credentials|null>(null);const rootRef=useRef<Y.Map<unknown>|null>(null);const yRef=useRef<YModule|null>(null);const providerRef=useRef<WebrtcProvider|null>(null);const docRef=useRef<Y.Doc|null>(null);const applyingRemote=useRef(false);const generation=useRef(0);const initializedRef=useRef(false);const peersRef=useRef(0);
+  const runRef=useRef(run);const credentialsRef=useRef<Credentials|null>(null);const rootRef=useRef<Y.Map<unknown>|null>(null);const yRef=useRef<YModule|null>(null);const providerRef=useRef<WebrtcProvider|null>(null);const docRef=useRef<Y.Doc|null>(null);const applyingRemote=useRef(false);const generation=useRef(0);const initializedRef=useRef(false);const peersRef=useRef(0);const discoveryRef=useRef<BroadcastChannel|null>(null);const tabIdRef=useRef("");const autoJoinBlockedRef=useRef(false);
 
   const stopProvider=useCallback(()=>{generation.current++;providerRef.current?.destroy();docRef.current?.destroy();providerRef.current=null;docRef.current=null;rootRef.current=null;yRef.current=null;initializedRef.current=false;peersRef.current=0;setPeers(0);setHasSnapshot(false);},[]);
-  const disconnect=useCallback(()=>{stopProvider();credentialsRef.current=null;setCredentials(null);setStatus("off");setMessage("");setHasSnapshot(false);clearCache();removeCredentialsFromUrl();onActiveChange?.(false);},[onActiveChange,stopProvider]);
+  const disconnect=useCallback(()=>{autoJoinBlockedRef.current=true;stopProvider();credentialsRef.current=null;setCredentials(null);setStatus("off");setMessage("");setHasSnapshot(false);clearCache();removeCredentialsFromUrl();onActiveChange?.(false);},[onActiveChange,stopProvider]);
 
   const start=useCallback(async(nextCredentials:Credentials,seed?:SharedRun)=>{
-    stopProvider();const attempt=generation.current;credentialsRef.current=nextCredentials;setCredentials(nextCredentials);setStatus(navigator.onLine?"joining":"offline");setMessage("");putCredentialsInUrl(nextCredentials);onActiveChange?.(true);
+    autoJoinBlockedRef.current=false;stopProvider();const attempt=generation.current;credentialsRef.current=nextCredentials;setCredentials(nextCredentials);setStatus(navigator.onLine?"joining":"offline");setMessage("");putCredentialsInUrl(nextCredentials);onActiveChange?.(true);if(discoveryRef.current&&tabIdRef.current)discoveryRef.current.postMessage({type:"session",sender:tabIdRef.current,credentials:nextCredentials} satisfies DiscoveryMessage);
     try{
       const [Yjs,{WebrtcProvider}]=await Promise.all([import("yjs"),import("y-webrtc")]);if(attempt!==generation.current)return;
       const doc=new Yjs.Doc();const root=doc.getMap<unknown>("run");docRef.current=doc;rootRef.current=root;yRef.current=Yjs;
@@ -98,6 +100,19 @@ export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;appl
   },[applyRun,onActiveChange,stopProvider]);
 
   useEffect(()=>{runRef.current=run;const root=rootRef.current,Yjs=yRef.current,currentCredentials=credentialsRef.current;if(!root||!Yjs||!currentCredentials||root.get("initialized")!==true)return;if(applyingRemote.current){applyingRemote.current=false;writeCache(currentCredentials,run);return;}writeSharedRun(root,run,Yjs);writeCache(currentCredentials,run);},[run]);
+  useEffect(()=>{
+    if(typeof BroadcastChannel==="undefined")return;
+    if(!tabIdRef.current)tabIdRef.current=randomToken(12);
+    const channel=new BroadcastChannel(discoveryChannelName);discoveryRef.current=channel;
+    channel.onmessage=event=>{const data=event.data as Partial<DiscoveryMessage>|null;if(!data||typeof data.sender!=="string"||!/^[A-Za-z0-9_-]{16}$/.test(data.sender)||data.sender===tabIdRef.current)return;
+      if(data.type==="request"){const current=credentialsRef.current;if(current)channel.postMessage({type:"session",sender:tabIdRef.current,target:data.sender,credentials:current} satisfies DiscoveryMessage);return;}
+      if(data.type!=="session"||(data.target&&data.target!==tabIdRef.current)||autoJoinBlockedRef.current||credentialsRef.current)return;
+      const candidate=data.credentials;if(!candidate||typeof candidate.room!=="string"||typeof candidate.password!=="string"||!parseCalculatorLink(encodeCalculatorLink(candidate)))return;
+      void start(candidate);
+    };
+    channel.postMessage({type:"request",sender:tabIdRef.current} satisfies DiscoveryMessage);
+    return()=>{if(discoveryRef.current===channel)discoveryRef.current=null;channel.close();};
+  },[start]);
   useEffect(()=>{const fromUrl=credentialsFromLocation();const cached=readCache();const chosen=fromUrl??cached?.credentials;const timer=chosen?window.setTimeout(()=>{const seed=cached&&sameCredentials(cached.credentials,chosen)?cached.snapshot:undefined;void start(chosen,seed);},0):null;return()=>{if(timer!==null)clearTimeout(timer);stopProvider();};},[start,stopProvider]);
   useEffect(()=>{if(!open)return;const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false);};window.addEventListener("keydown",escape);return()=>window.removeEventListener("keydown",escape);},[open]);
 
