@@ -2,7 +2,7 @@
 
 ## Cloudflare deployment
 
-Protect the entire Worker with Cloudflare Access, then configure `ALLOWED_EMAIL` to the same email permitted by the Access policy. Add `GITHUB_TOKEN` with `wrangler secret put GITHUB_TOKEN`; use a fine-grained token with **Contents: Read and write** access to `poggieboii78-arch/nullscape-tools` only. Never commit the token.
+Protect the entire Worker with Cloudflare Access, then configure `ALLOWED_EMAILS` as a comma-separated list of the emails permitted by the Access policy (for example, `owner@example.com,friend@example.com`). The legacy `ALLOWED_EMAIL` variable is also accepted during migration. Add `GITHUB_TOKEN` with `wrangler secret put GITHUB_TOKEN`; use a fine-grained token with **Contents: Read and write** access to `poggieboii78-arch/nullscape-tools` only. Never commit the token.
 
 Publishing updates `apps/tech-compendium/data/compendium-data.json` on `main`, which triggers the GitHub Pages rebuild. The API sends the current Git blob SHA so stale editor tabs cannot overwrite a newer publication.
 
