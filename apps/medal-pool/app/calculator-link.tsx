@@ -13,6 +13,7 @@ type YModule=typeof import("yjs");
 type ApplyRun=(run:SharedRun)=>void;
 
 const cacheKey="nullscape-calculator-link-v1";
+const participantKey="nullscape-calculator-link-participant-v1";
 const hashKey="calculator-link";
 const discoveryChannelName="nullscape-calculator-link-discovery-v1";
 const scalarKeys=["level","players","difficulty","party","gifts"] as const;
@@ -21,6 +22,10 @@ const stackKeys=["enemies","curses","medalCurses","greaterCurses","upgrades"] as
 function randomToken(bytes:number){
   const value=new Uint8Array(bytes);crypto.getRandomValues(value);let binary="";for(const byte of value)binary+=String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/g,"");
+}
+
+function participantId(){
+  try{const stored=localStorage.getItem(participantKey);if(stored&&/^[A-Za-z0-9_-]{16}$/.test(stored))return stored;const created=randomToken(12);localStorage.setItem(participantKey,created);return created;}catch{return randomToken(12);}
 }
 
 export function encodeCalculatorLink(credentials:Credentials){return`${credentials.room}.${credentials.password}`;}
@@ -92,8 +97,9 @@ export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;appl
       if(seed){writeSharedRun(root,seed,Yjs);initializedRef.current=true;setHasSnapshot(true);writeCache(nextCredentials,seed);}
       const localPreview=["terminal.local","localhost","127.0.0.1"].includes(location.hostname);if(!globalThis.crypto?.subtle&&!localPreview)throw new Error("Calculator Link requires HTTPS");
       const provider=new WebrtcProvider(`nullscape-calculator-${nextCredentials.room}`,doc,{password:globalThis.crypto?.subtle?nextCredentials.password:undefined,maxConns:24});providerRef.current=provider;
-      const updatePresence=()=>{let count=0;provider.awareness.getStates().forEach((state,clientId)=>{if(clientId!==doc.clientID&&state.nullscape)count++;});peersRef.current=count;setPeers(count);setStatus(navigator.onLine?(initializedRef.current?(count?"connected":"waiting"):"joining"):"offline");};
-      provider.awareness.on("change",updatePresence);provider.awareness.setLocalStateField("nullscape",{joinedAt:Date.now()});updatePresence();
+      const ownParticipant=participantId();
+      const updatePresence=()=>{const participants=new Set<string>();provider.awareness.getStates().forEach((state,clientId)=>{const presence=state.nullscape as {participantId?:unknown}|undefined;if(!presence)return;participants.add(typeof presence.participantId==="string"&&/^[A-Za-z0-9_-]{16}$/.test(presence.participantId)?presence.participantId:`legacy-${clientId}`);});const count=participants.size;peersRef.current=count;setPeers(count);setStatus(navigator.onLine?(initializedRef.current?(count?"connected":"waiting"):"joining"):"offline");};
+      provider.awareness.on("change",updatePresence);provider.awareness.setLocalStateField("nullscape",{participantId:ownParticipant,joinedAt:Date.now()});updatePresence();
       const online=()=>setStatus(initializedRef.current?(peersRef.current?"connected":"waiting"):"joining");const offline=()=>setStatus("offline");const listenerController=new AbortController();window.addEventListener("online",online,{signal:listenerController.signal});window.addEventListener("offline",offline,{signal:listenerController.signal});doc.on("destroy",()=>{provider.awareness.off("change",updatePresence);listenerController.abort();});
       pull();window.setTimeout(()=>{if(attempt===generation.current&&!initializedRef.current)setStatus(navigator.onLine?"waiting":"offline");},5000);
     }catch(error){if(attempt!==generation.current)return;console.error("Calculator Link failed to start",error);setStatus("error");setMessage("Couldn’t start the live link. Check your connection and try again.");}
@@ -119,7 +125,7 @@ export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;appl
   const create=async()=>{const next={room:randomToken(12),password:randomToken(32)};await start(next,runRef.current);const copied=await copyText(inviteUrl(next));setMessage(copied?"Invite copied — send it to your friends.":"Session created. Use Copy invite to share it.");};
   const join=()=>{const parsed=parseCalculatorLink(joinValue);if(!parsed){setMessage("That doesn’t look like a Calculator Link.");return;}const cached=readCache();void start(parsed,cached&&sameCredentials(cached.credentials,parsed)?cached.snapshot:undefined);setJoinValue("");setMessage("");};
   const copyInvite=async()=>{if(!credentials)return;const copied=await copyText(inviteUrl(credentials));setMessage(copied?"Invite copied.":"Copy failed — select the invite below manually.");};
-  const statusText=status==="connected"?`${peers} other participant${peers===1?"":"s"} connected`:status==="offline"?"Offline — reconnects automatically":status==="error"?"Link unavailable":status==="joining"?"Finding the session…":"Waiting for friends…";
+  const statusText=status==="connected"?`${peers} participant${peers===1?"":"s"} connected`:status==="offline"?"Offline — reconnects automatically":status==="error"?"Link unavailable":status==="joining"?"Finding the session…":"Waiting for friends…";
 
   return <>
     <button className={`calculator-link-button ${status!=="off"?"active":""}`} data-tour="calculator-link" onClick={()=>setOpen(true)}><i aria-hidden="true"/>{status==="off"?"Calculator Link":peers?`${peers} linked`:"Link active"}</button>
