@@ -179,12 +179,25 @@
           "title": "tryna find one son",
           "icon": "",
           "summary": "",
-          "published": true,
+          "published": false,
           "updatedAt": "2026-08-09T19:44:32.940Z",
-          "blocks": []
+          "blocks": [
+            {
+              "id": "block-msmaphra-pc69i",
+              "type": "video-comparison",
+              "content": "",
+              "url": "",
+              "caption": "Left",
+              "secondaryUrl": "",
+              "secondaryCaption": "Right",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            }
+          ]
         }
       ],
-      "updatedAt": "2026-08-09T19:46:32.478Z"
+      "updatedAt": "2026-08-10T12:11:35.204Z"
     },
     {
       "id": "class-msl0qnur-e8nfe",
