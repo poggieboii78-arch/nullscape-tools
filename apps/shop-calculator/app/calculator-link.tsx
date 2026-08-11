@@ -19,6 +19,7 @@ const hashKey="quicklink";
 const legacyHashKey="calculator-link";
 const discoveryChannelName="nullscape-calculator-link-discovery-v1";
 const signalingServers=["wss://y-webrtc-eu.fly.dev","wss://signaling.yjs.dev"];
+const turnCredentialsUrl="https://nullscape-quicklink-turn.poggieboii78.workers.dev/turn-credentials";
 const reconnectDelays=[4000,9000,18000,30000];
 const scalarKeys=["level","players","difficulty","party","gifts"] as const;
 const stackKeys=["enemies","curses","medalCurses","greaterCurses","upgrades"] as const;
@@ -86,6 +87,11 @@ async function copyText(value:string){
   try{const input=document.createElement("textarea");input.value=value;input.style.position="fixed";input.style.opacity="0";document.body.append(input);input.select();const copied=document.execCommand("copy");input.remove();return copied;}catch{return false;}
 }
 
+async function fetchIceServers():Promise<RTCIceServer[]>{
+  const controller=new AbortController();const timeout=window.setTimeout(()=>controller.abort(),8000);
+  try{const response=await fetch(turnCredentialsUrl,{method:"POST",cache:"no-store",signal:controller.signal});if(!response.ok)throw new Error(`TURN credentials returned ${response.status}`);const payload=await response.json() as {iceServers?:unknown};if(!Array.isArray(payload.iceServers)||!payload.iceServers.length)throw new Error("TURN credentials were empty");return payload.iceServers as RTCIceServer[];}finally{window.clearTimeout(timeout);}
+}
+
 export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;applyRun:ApplyRun;onActiveChange?:(active:boolean)=>void}){
   const [open,setOpen]=useState(false);const [status,setStatus]=useState<LinkStatus>("off");const [peers,setPeers]=useState(0);const [hasSnapshot,setHasSnapshot]=useState(false);const [joinValue,setJoinValue]=useState("");const [message,setMessage]=useState("");const [credentials,setCredentials]=useState<Credentials|null>(null);
   const runRef=useRef(run);const credentialsRef=useRef<Credentials|null>(null);const rootRef=useRef<Y.Map<unknown>|null>(null);const yRef=useRef<YModule|null>(null);const providerRef=useRef<WebrtcProvider|null>(null);const docRef=useRef<Y.Doc|null>(null);const applyingRemote=useRef(false);const lastRemoteRef=useRef<SharedRun|null>(null);const generation=useRef(0);const initializedRef=useRef(false);const peersRef=useRef(0);const remotePresenceRef=useRef(0);const discoveryRef=useRef<BroadcastChannel|null>(null);const tabIdRef=useRef("");const autoJoinBlockedRef=useRef(false);const reconnectTimerRef=useRef<number|null>(null);const reconnectAttemptRef=useRef(0);
@@ -102,7 +108,8 @@ export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;appl
       root.observeDeep(pull);
       if(seed){lastRemoteRef.current=seed;initializedRef.current=true;setHasSnapshot(true);writeCache(nextCredentials,seed);if(nextCredentials.role==="editor")writeSharedRun(root,seed,Yjs);else if(!sameSharedRun(seed,runRef.current)){applyingRemote.current=true;applyRun(seed);}}
       const localPreview=["terminal.local","localhost","127.0.0.1"].includes(location.hostname);if(!globalThis.crypto?.subtle&&!localPreview)throw new Error("QuickLink requires HTTPS");
-      const provider=new WebrtcProvider(`nullscape-calculator-${nextCredentials.room}`,doc,{password:globalThis.crypto?.subtle?nextCredentials.password:undefined,maxConns:24,signaling:signalingServers});providerRef.current=provider;
+      let iceServers:RTCIceServer[]|undefined;try{iceServers=await fetchIceServers();}catch(error){console.warn("QuickLink TURN relay unavailable; trying direct connection",error);}if(attempt!==generation.current)return;
+      const provider=new WebrtcProvider(`nullscape-calculator-${nextCredentials.room}`,doc,{password:globalThis.crypto?.subtle?nextCredentials.password:undefined,maxConns:24,signaling:signalingServers,peerOpts:iceServers?{config:{iceServers}}:undefined});providerRef.current=provider;
       const ownParticipant=participantId();
       const scheduleReconnect=()=>{if(reconnectTimerRef.current!==null||attempt!==generation.current||remotePresenceRef.current>0||!navigator.onLine)return;const delay=reconnectDelays[Math.min(reconnectAttemptRef.current,reconnectDelays.length-1)];reconnectTimerRef.current=window.setTimeout(()=>{reconnectTimerRef.current=null;if(attempt!==generation.current||remotePresenceRef.current>0||!navigator.onLine)return;reconnectAttemptRef.current++;provider.disconnect();provider.connect();provider.awareness.setLocalStateField("nullscape",{participantId:ownParticipant,role:nextCredentials.role,joinedAt:Date.now()});scheduleReconnect();},delay);};
       const updatePresence=()=>{const participants=new Set<string>();let remoteCount=0;provider.awareness.getStates().forEach((state,clientId)=>{const presence=state.nullscape as {participantId?:unknown;role?:unknown}|undefined;if(!presence)return;if(clientId!==provider.awareness.clientID)remoteCount++;if(presence.role==="spectator")return;participants.add(typeof presence.participantId==="string"&&/^[A-Za-z0-9_-]{16}$/.test(presence.participantId)?presence.participantId:`legacy-${clientId}`);});const count=participants.size;peersRef.current=count;remotePresenceRef.current=remoteCount;setPeers(count);setStatus(navigator.onLine?(initializedRef.current?(count?"connected":"waiting"):"joining"):"offline");if(remoteCount){reconnectAttemptRef.current=0;if(reconnectTimerRef.current!==null)window.clearTimeout(reconnectTimerRef.current);reconnectTimerRef.current=null;}else scheduleReconnect();};

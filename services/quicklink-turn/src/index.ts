@@ -1,11 +1,11 @@
 const credentialTtlSeconds = 3600;
 
 type TurnCredentials = {
-  iceServers: {
+  iceServers: Array<{
     urls: string[];
-    username: string;
-    credential: string;
-  };
+    username?: string;
+    credential?: string;
+  }>;
 };
 
 function corsHeaders(origin: string): HeadersInit {
@@ -30,14 +30,18 @@ function isAllowedOrigin(origin: string, configuredOrigins: string): boolean {
 function isTurnCredentials(value: unknown): value is TurnCredentials {
   if (!value || typeof value !== "object") return false;
   const iceServers = (value as { iceServers?: unknown }).iceServers;
-  if (!iceServers || typeof iceServers !== "object") return false;
-  const candidate = iceServers as Record<string, unknown>;
-  return (
-    Array.isArray(candidate.urls) &&
-    candidate.urls.every((url) => typeof url === "string") &&
-    typeof candidate.username === "string" &&
-    typeof candidate.credential === "string"
-  );
+  if (!Array.isArray(iceServers) || iceServers.length === 0) return false;
+  return iceServers.every((server) => {
+    if (!server || typeof server !== "object") return false;
+    const candidate = server as Record<string, unknown>;
+    return (
+      Array.isArray(candidate.urls) &&
+      candidate.urls.length > 0 &&
+      candidate.urls.every((url) => typeof url === "string") &&
+      (candidate.username === undefined || typeof candidate.username === "string") &&
+      (candidate.credential === undefined || typeof candidate.credential === "string")
+    );
+  });
 }
 
 function json(body: unknown, status: number, origin?: string): Response {
@@ -74,7 +78,7 @@ export default {
 
     try {
       const response = await fetch(
-        `https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(env.TURN_KEY_ID)}/credentials/generate`,
+        `https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(env.TURN_KEY_ID)}/credentials/generate-ice-servers`,
         {
           method: "POST",
           headers: {
@@ -94,15 +98,16 @@ export default {
         return json({ error: "Could not generate TURN credentials" }, 502, origin);
       }
 
-      const urls = payload.iceServers.urls.filter((turnUrl) => !turnUrl.includes(":53"));
+      const iceServers = payload.iceServers
+        .map((server) => ({
+          ...server,
+          urls: server.urls.filter((url) => !/:53(?:[/?]|$)/.test(url)),
+          ...(server.credential ? { credentialType: "password" as const } : {}),
+        }))
+        .filter((server) => server.urls.length > 0);
       return json({
         ttl: credentialTtlSeconds,
-        iceServers: [{
-          urls,
-          username: payload.iceServers.username,
-          credential: payload.iceServers.credential,
-          credentialType: "password",
-        }],
+        iceServers,
       }, 200, origin);
     } catch (error) {
       console.error(JSON.stringify({
