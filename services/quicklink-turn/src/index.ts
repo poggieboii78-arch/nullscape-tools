@@ -1,4 +1,9 @@
+import { DurableObject } from "cloudflare:workers";
+
 const credentialTtlSeconds = 1800;
+const maxRelayMessageBytes = 96 * 1024;
+const maxRoomConnections = 32;
+const maxRelayMessagesPerMinute = 120;
 
 type TurnCredentials = {
   iceServers: Array<{
@@ -11,11 +16,59 @@ type TurnCredentials = {
 function corsHeaders(origin: string): HeadersInit {
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
+}
+
+export class QuickLinkRoom extends DurableObject<Env> {
+  async fetch(request: Request): Promise<Response> {
+    if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+      return json({ error: "WebSocket upgrade required" }, 426);
+    }
+
+    if (this.ctx.getWebSockets().length >= maxRoomConnections) {
+      return json({ error: "Room is full" }, 429);
+    }
+
+    const pair = new WebSocketPair();
+    const client = pair[0];
+    const server = pair[1];
+    this.ctx.acceptWebSocket(server);
+    server.serializeAttachment({ windowStartedAt: Date.now(), messages: 0 });
+
+    for (const socket of this.ctx.getWebSockets()) {
+      if (socket !== server && socket.readyState === WebSocket.OPEN) {
+        socket.send('{"type":"peer-joined"}');
+      }
+    }
+
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  webSocketMessage(sender: WebSocket, message: string | ArrayBuffer): void {
+    const now = Date.now();
+    const saved = sender.deserializeAttachment() as { windowStartedAt?: unknown; messages?: unknown } | null;
+    const windowStartedAt = typeof saved?.windowStartedAt === "number" && now - saved.windowStartedAt < 60_000 ? saved.windowStartedAt : now;
+    const messages = windowStartedAt === saved?.windowStartedAt && typeof saved.messages === "number" ? saved.messages + 1 : 1;
+    sender.serializeAttachment({ windowStartedAt, messages });
+    if (messages > maxRelayMessagesPerMinute) {
+      sender.close(1008, "Message rate exceeded");
+      return;
+    }
+
+    const size = typeof message === "string" ? new TextEncoder().encode(message).byteLength : message.byteLength;
+    if (size > maxRelayMessageBytes) {
+      sender.close(1009, "Message too large");
+      return;
+    }
+
+    for (const socket of this.ctx.getWebSockets()) {
+      if (socket !== sender && socket.readyState === WebSocket.OPEN) socket.send(message);
+    }
+  }
 }
 
 function isAllowedOrigin(origin: string, configuredOrigins: string): boolean {
@@ -66,6 +119,29 @@ export default {
 
     if (url.pathname === "/health" && request.method === "GET") {
       return json({ ok: true }, 200);
+    }
+
+    if (url.pathname === "/quicklink") {
+      const origin = request.headers.get("Origin") ?? "";
+      if (!origin || !isAllowedOrigin(origin, env.ALLOWED_ORIGINS)) {
+        return json({ error: "Origin not allowed" }, 403);
+      }
+      const room = url.searchParams.get("room") ?? "";
+      if (!/^[A-Za-z0-9_-]{16}$/.test(room)) return json({ error: "Invalid room" }, 400, origin);
+      if (request.headers.get("Upgrade")?.toLowerCase() !== "websocket") {
+        return json({ error: "WebSocket upgrade required" }, 426, origin);
+      }
+      const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
+      const [visitorLimit, serviceLimit] = await Promise.all([
+        env.RELAY_VISITOR_RATE_LIMITER.limit({ key: clientIp }),
+        env.RELAY_SERVICE_RATE_LIMITER.limit({ key: "quicklink-relay" }),
+      ]);
+      if (!visitorLimit.success || !serviceLimit.success) {
+        const response = json({ error: "Too many relay connections" }, 429, origin);
+        response.headers.set("Retry-After", "60");
+        return response;
+      }
+      return env.QUICKLINK_ROOMS.getByName(room).fetch(request);
     }
 
     if (url.pathname !== "/turn-credentials") {

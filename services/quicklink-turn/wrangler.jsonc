@@ -8,6 +8,20 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "QUICKLINK_ROOMS",
+        "class_name": "QuickLinkRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["QuickLinkRoom"]
+    }
+  ],
   "ratelimits": [
     {
       "name": "VISITOR_RATE_LIMITER",
@@ -22,6 +36,22 @@
       "namespace_id": "11002",
       "simple": {
         "limit": 120,
+        "period": 60
+      }
+    },
+    {
+      "name": "RELAY_VISITOR_RATE_LIMITER",
+      "namespace_id": "11003",
+      "simple": {
+        "limit": 30,
+        "period": 60
+      }
+    },
+    {
+      "name": "RELAY_SERVICE_RATE_LIMITER",
+      "namespace_id": "11004",
+      "simple": {
+        "limit": 300,
         "period": 60
       }
     }
