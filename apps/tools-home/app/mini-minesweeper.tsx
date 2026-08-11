@@ -3,8 +3,8 @@
 import { useState } from "react";
 import * as minesweeper from "minesweeper";
 
-const ROWS = 8;
-const COLS = 8;
+const ROWS = 7;
+const COLS = 7;
 const MINE_COUNT = 10;
 
 type Board = InstanceType<typeof minesweeper.Board>;
@@ -54,7 +54,7 @@ export function MiniMinesweeper() {
       </header>
       <div className="mine-status"><b>{String(Math.max(0, MINE_COUNT - flags)).padStart(3, "0")}</b><button type="button" onClick={newBoard} aria-label="New board">{state === minesweeper.BoardStateEnum.LOST ? "😵" : state === minesweeper.BoardStateEnum.WON ? "😎" : "🙂"}</button><b>000</b></div>
       <div className="mine-board-scroll">
-        <div className="mine-board" role="grid" aria-label="8 by 8 Minesweeper board">
+        <div className="mine-board" role="grid" aria-label="7 by 7 Minesweeper board">
           {grid.flatMap((row, y) => row.map((cell, x) => {
             const revealed = cell.state === minesweeper.CellStateEnum.OPEN;
             const flagged = cell.flag === minesweeper.CellFlagEnum.EXCLAMATION;
