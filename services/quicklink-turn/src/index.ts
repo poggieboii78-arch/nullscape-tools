@@ -1,4 +1,4 @@
-const credentialTtlSeconds = 3600;
+const credentialTtlSeconds = 1800;
 
 type TurnCredentials = {
   iceServers: Array<{
@@ -51,6 +51,15 @@ function json(body: unknown, status: number, origin?: string): Response {
   });
 }
 
+async function anonymousUsageId(request: Request, secret: string): Promise<string> {
+  const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const bytes = new TextEncoder().encode(`${secret}:${clientIp}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
+}
+
 export default {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
@@ -77,6 +86,22 @@ export default {
     }
 
     try {
+      const clientIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
+      const [visitorLimit, serviceLimit] = await Promise.all([
+        env.VISITOR_RATE_LIMITER.limit({ key: clientIp }),
+        env.SERVICE_RATE_LIMITER.limit({ key: "turn-credentials" }),
+      ]);
+      if (!visitorLimit.success || !serviceLimit.success) {
+        console.warn(JSON.stringify({
+          event: "turn_credentials_rate_limited",
+          scope: !visitorLimit.success ? "visitor" : "service",
+        }));
+        const response = json({ error: "Too many credential requests" }, 429, origin);
+        response.headers.set("Retry-After", "60");
+        return response;
+      }
+
+      const customIdentifier = await anonymousUsageId(request, env.TURN_KEY_SECRET);
       const response = await fetch(
         `https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(env.TURN_KEY_ID)}/credentials/generate-ice-servers`,
         {
@@ -85,7 +110,10 @@ export default {
             "Authorization": `Bearer ${env.TURN_KEY_SECRET}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ ttl: credentialTtlSeconds }),
+          body: JSON.stringify({
+            ttl: credentialTtlSeconds,
+            customIdentifier,
+          }),
         },
       );
 
