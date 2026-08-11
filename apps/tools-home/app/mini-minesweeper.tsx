@@ -49,27 +49,30 @@ export function MiniMinesweeper() {
   return <section className={`mine-corner${open ? " open" : ""}`} data-quicklink-isolated="true" aria-label="Minesweeper easter egg">
     {open && <div className="mine-inline">
       <header>
-        <div><small>LOCAL ONLY · OPEN SOURCE</small><h2>Tiny Minesweeper</h2></div>
+        <div><small>LOCAL ONLY · OPEN SOURCE</small><h2>Minesweeper</h2></div>
         <button type="button" onClick={() => setOpen(false)} aria-label="Close Minesweeper">×</button>
       </header>
-      <div className="mine-status"><span>{message}</span><b>{Math.max(0, MINE_COUNT - flags)} 💣</b></div>
-      <div className="mine-board" role="grid" aria-label="8 by 8 Minesweeper board">
-        {grid.flatMap((row, y) => row.map((cell, x) => {
-          const revealed = cell.state === minesweeper.CellStateEnum.OPEN;
-          const flagged = cell.flag === minesweeper.CellFlagEnum.EXCLAMATION;
-          const count = revealed && !cell.isMine ? cell.numAdjacentMines : 0;
-          const label = flagged ? "Flagged cell" : revealed ? (cell.isMine ? "Mine" : `${count} neighboring mines`) : "Hidden cell";
-          return <button key={`${x}-${y}`} type="button" role="gridcell" aria-label={label}
-            className={`mine-cell${revealed ? " revealed" : ""}${revealed && cell.isMine ? " exploded" : ""}${count ? ` count-${count}` : ""}`}
-            onClick={() => play(x, y)} onContextMenu={event => { event.preventDefault(); flag(x, y); }}>
-            {flagged && !revealed ? "⚑" : revealed && cell.isMine ? "✹" : count || ""}
-          </button>;
-        }))}
+      <div className="mine-status"><b>{String(Math.max(0, MINE_COUNT - flags)).padStart(3, "0")}</b><button type="button" onClick={newBoard} aria-label="New board">{state === minesweeper.BoardStateEnum.LOST ? "😵" : state === minesweeper.BoardStateEnum.WON ? "😎" : "🙂"}</button><b>000</b></div>
+      <div className="mine-board-scroll">
+        <div className="mine-board" role="grid" aria-label="8 by 8 Minesweeper board">
+          {grid.flatMap((row, y) => row.map((cell, x) => {
+            const revealed = cell.state === minesweeper.CellStateEnum.OPEN;
+            const flagged = cell.flag === minesweeper.CellFlagEnum.EXCLAMATION;
+            const count = revealed && !cell.isMine ? cell.numAdjacentMines : 0;
+            const label = flagged ? "Flagged cell" : revealed ? (cell.isMine ? "Mine" : `${count} neighboring mines`) : "Hidden cell";
+            return <button key={`${x}-${y}`} type="button" role="gridcell" aria-label={label}
+              className={`mine-cell${revealed ? " revealed" : ""}${revealed && cell.isMine ? " exploded" : ""}${count ? ` count-${count}` : ""}`}
+              onClick={() => play(x, y)} onContextMenu={event => { event.preventDefault(); flag(x, y); }}>
+              {flagged && !revealed ? "⚑" : revealed && cell.isMine ? "✹" : count || ""}
+            </button>;
+          }))}
+        </div>
       </div>
       <div className="mine-actions">
         <button className={flagMode ? "active" : ""} type="button" onClick={() => setFlagMode(value => !value)} aria-pressed={flagMode}>⚑ Flag mode</button>
         <button type="button" onClick={newBoard}>New board</button>
       </div>
+      <div className="mine-message">{message}</div>
       <p>Game logic by <a href="https://github.com/binaryluke/Minesweeper" target="_blank" rel="noreferrer">binaryluke/Minesweeper</a> · MIT License</p>
     </div>}
     <button className="mine-launcher" type="button" onClick={() => setOpen(value => !value)} aria-expanded={open} aria-label={open ? "Close tiny Minesweeper" : "Open tiny Minesweeper"} title="Tiny open-source Minesweeper">💣</button>
