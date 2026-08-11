@@ -4,6 +4,7 @@
 
 import { useMemo } from "react";
 import { buildRunQuery, RunDock, useSharedRun } from "./run-dock";
+import { MiniMinesweeper } from "./mini-minesweeper";
 
 const checkerUrl="/nullscape-tools/medal/";
 const altarUrl="/nullscape-tools/altar/";
@@ -40,6 +41,7 @@ export default function Home(){
       </section>
     </div>
     <footer><span>NULLSCAPE TOOLS</span><span>Settings save on this device · Unofficial fan project · Made with help from an LLM.</span></footer>
+    <MiniMinesweeper/>
     <RunDock run={run} update={update} reset={reset} applyLinkedRun={applyLinkedRun} toolId="home" toolSteps={steps}/>
   </main>;
 }
