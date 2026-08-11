@@ -5,7 +5,8 @@ import type * as Y from "yjs";
 import type { WebrtcProvider } from "y-webrtc";
 import type { SharedRun, StackMap } from "./run-dock";
 
-type Credentials={room:string;password:string};
+type LinkRole="editor"|"spectator";
+type Credentials={room:string;password:string;role:LinkRole};
 type LinkStatus="off"|"joining"|"waiting"|"connected"|"offline"|"error";
 type SessionCache={version:1;credentials:Credentials;snapshot?:SharedRun};
 type DiscoveryMessage={type:"request";sender:string}|{type:"session";sender:string;target?:string;credentials:Credentials}|{type:"disconnect";sender:string;credentials:Credentials};
@@ -14,7 +15,8 @@ type ApplyRun=(run:SharedRun)=>void;
 
 const cacheKey="nullscape-calculator-link-v1";
 const participantKey="nullscape-calculator-link-participant-v1";
-const hashKey="calculator-link";
+const hashKey="quicklink";
+const legacyHashKey="calculator-link";
 const discoveryChannelName="nullscape-calculator-link-discovery-v1";
 const signalingServers=["wss://signaling.yjs.dev","wss://y-webrtc-signaling-eu.herokuapp.com"];
 const reconnectDelays=[4000,9000,18000,30000];
@@ -30,34 +32,36 @@ function participantId(){
   try{const stored=localStorage.getItem(participantKey);if(stored&&/^[A-Za-z0-9_-]{16}$/.test(stored))return stored;const created=randomToken(12);localStorage.setItem(participantKey,created);return created;}catch{return randomToken(12);}
 }
 
-export function encodeCalculatorLink(credentials:Credentials){return`${credentials.room}.${credentials.password}`;}
+export function encodeCalculatorLink(credentials:Credentials){return`${credentials.room}.${credentials.password}${credentials.role==="spectator"?".spectator":""}`;}
 
 export function parseCalculatorLink(value:string):Credentials|null{
   let candidate=value.trim();
   try{
-    if(candidate.includes("#")){const url=new URL(candidate,"https://nullscape.invalid/");candidate=new URLSearchParams(url.hash.slice(1)).get(hashKey)??"";}
-    else if(candidate.startsWith("#"))candidate=new URLSearchParams(candidate.slice(1)).get(hashKey)??"";
+    if(candidate.includes("#")){const url=new URL(candidate,"https://nullscape.invalid/");const params=new URLSearchParams(url.hash.slice(1));candidate=params.get(hashKey)??params.get(legacyHashKey)??"";}
+    else if(candidate.startsWith("#")){const params=new URLSearchParams(candidate.slice(1));candidate=params.get(hashKey)??params.get(legacyHashKey)??"";}
     else if(candidate.startsWith(`${hashKey}=`))candidate=candidate.slice(hashKey.length+1);
+    else if(candidate.startsWith(`${legacyHashKey}=`))candidate=candidate.slice(legacyHashKey.length+1);
     candidate=decodeURIComponent(candidate);
   }catch{return null;}
-  const [room,password,...rest]=candidate.split(".");
-  if(rest.length||!room||!password||!/^[A-Za-z0-9_-]{16}$/.test(room)||!/^[A-Za-z0-9_-]{43}$/.test(password))return null;
-  return{room,password};
+  const [room,password,mode,...rest]=candidate.split(".");
+  if(rest.length||(mode&&mode!=="spectator")||!room||!password||!/^[A-Za-z0-9_-]{16}$/.test(room)||!/^[A-Za-z0-9_-]{43}$/.test(password))return null;
+  return{room,password,role:mode==="spectator"?"spectator":"editor"};
 }
 
 function credentialsFromLocation(){return parseCalculatorLink(location.hash);}
+function asSpectator(credentials:Credentials):Credentials{return{...credentials,role:"spectator"};}
 function inviteUrl(credentials:Credentials){const url=new URL(location.href);url.searchParams.delete("run");url.hash=new URLSearchParams({[hashKey]:encodeCalculatorLink(credentials)}).toString();return url.toString();}
 function putCredentialsInUrl(credentials:Credentials){const url=new URL(location.href);url.searchParams.delete("run");url.hash=new URLSearchParams({[hashKey]:encodeCalculatorLink(credentials)}).toString();history.replaceState({},"",url);}
-function removeCredentialsFromUrl(){const url=new URL(location.href);if(!new URLSearchParams(url.hash.slice(1)).has(hashKey))return;url.hash="";history.replaceState({},"",url);}
+function removeCredentialsFromUrl(){const url=new URL(location.href);const params=new URLSearchParams(url.hash.slice(1));if(!params.has(hashKey)&&!params.has(legacyHashKey))return;url.hash="";history.replaceState({},"",url);}
 
 function readCache():SessionCache|null{
-  try{const value=JSON.parse(sessionStorage.getItem(cacheKey)??"null") as Partial<SessionCache>|null;if(value?.version===1&&value.credentials&&parseCalculatorLink(encodeCalculatorLink(value.credentials)))return value as SessionCache;}catch{}
+  try{const value=JSON.parse(sessionStorage.getItem(cacheKey)??"null") as Partial<SessionCache>|null;if(value?.version===1&&value.credentials){const credentials=parseCalculatorLink(encodeCalculatorLink(value.credentials));if(credentials)return{version:1,credentials,snapshot:value.snapshot};}}catch{}
   return null;
 }
 function writeCache(credentials:Credentials,snapshot?:SharedRun){try{sessionStorage.setItem(cacheKey,JSON.stringify({version:1,credentials,snapshot} satisfies SessionCache));}catch{}}
 function clearCache(){try{sessionStorage.removeItem(cacheKey);}catch{}}
 
-function sameCredentials(left:Credentials,right:Credentials){return left.room===right.room&&left.password===right.password;}
+function sameCredentials(left:Credentials,right:Credentials){return left.room===right.room&&left.password===right.password&&left.role===right.role;}
 function sharedShape(run:SharedRun){return{level:run.level,players:run.players,difficulty:run.difficulty,party:run.party,gifts:run.gifts,enemies:run.enemies,curses:run.curses,medalCurses:run.medalCurses,greaterCurses:run.greaterCurses,upgrades:run.upgrades};}
 function sameSharedRun(left:SharedRun,right:SharedRun){return JSON.stringify(sharedShape(left))===JSON.stringify(sharedShape(right));}
 
@@ -84,9 +88,9 @@ async function copyText(value:string){
 
 export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;applyRun:ApplyRun;onActiveChange?:(active:boolean)=>void}){
   const [open,setOpen]=useState(false);const [status,setStatus]=useState<LinkStatus>("off");const [peers,setPeers]=useState(0);const [hasSnapshot,setHasSnapshot]=useState(false);const [joinValue,setJoinValue]=useState("");const [message,setMessage]=useState("");const [credentials,setCredentials]=useState<Credentials|null>(null);
-  const runRef=useRef(run);const credentialsRef=useRef<Credentials|null>(null);const rootRef=useRef<Y.Map<unknown>|null>(null);const yRef=useRef<YModule|null>(null);const providerRef=useRef<WebrtcProvider|null>(null);const docRef=useRef<Y.Doc|null>(null);const applyingRemote=useRef(false);const generation=useRef(0);const initializedRef=useRef(false);const peersRef=useRef(0);const discoveryRef=useRef<BroadcastChannel|null>(null);const tabIdRef=useRef("");const autoJoinBlockedRef=useRef(false);const reconnectTimerRef=useRef<number|null>(null);const reconnectAttemptRef=useRef(0);
+  const runRef=useRef(run);const credentialsRef=useRef<Credentials|null>(null);const rootRef=useRef<Y.Map<unknown>|null>(null);const yRef=useRef<YModule|null>(null);const providerRef=useRef<WebrtcProvider|null>(null);const docRef=useRef<Y.Doc|null>(null);const applyingRemote=useRef(false);const lastRemoteRef=useRef<SharedRun|null>(null);const generation=useRef(0);const initializedRef=useRef(false);const peersRef=useRef(0);const remotePresenceRef=useRef(0);const discoveryRef=useRef<BroadcastChannel|null>(null);const tabIdRef=useRef("");const autoJoinBlockedRef=useRef(false);const reconnectTimerRef=useRef<number|null>(null);const reconnectAttemptRef=useRef(0);
 
-  const stopProvider=useCallback(()=>{generation.current++;if(reconnectTimerRef.current!==null)window.clearTimeout(reconnectTimerRef.current);reconnectTimerRef.current=null;reconnectAttemptRef.current=0;providerRef.current?.destroy();docRef.current?.destroy();providerRef.current=null;docRef.current=null;rootRef.current=null;yRef.current=null;initializedRef.current=false;peersRef.current=0;setPeers(0);setHasSnapshot(false);},[]);
+  const stopProvider=useCallback(()=>{generation.current++;if(reconnectTimerRef.current!==null)window.clearTimeout(reconnectTimerRef.current);reconnectTimerRef.current=null;reconnectAttemptRef.current=0;providerRef.current?.destroy();docRef.current?.destroy();providerRef.current=null;docRef.current=null;rootRef.current=null;yRef.current=null;lastRemoteRef.current=null;initializedRef.current=false;peersRef.current=0;remotePresenceRef.current=0;setPeers(0);setHasSnapshot(false);},[]);
   const disconnect=useCallback((notifyOtherTabs=true)=>{const current=credentialsRef.current;if(notifyOtherTabs&&current&&discoveryRef.current&&tabIdRef.current)discoveryRef.current.postMessage({type:"disconnect",sender:tabIdRef.current,credentials:current} satisfies DiscoveryMessage);autoJoinBlockedRef.current=true;stopProvider();credentialsRef.current=null;setCredentials(null);setStatus("off");setMessage("");setHasSnapshot(false);clearCache();removeCredentialsFromUrl();onActiveChange?.(false);},[onActiveChange,stopProvider]);
 
   const start=useCallback(async(nextCredentials:Credentials,seed?:SharedRun)=>{
@@ -94,21 +98,21 @@ export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;appl
     try{
       const [Yjs,{WebrtcProvider}]=await Promise.all([import("yjs"),import("y-webrtc")]);if(attempt!==generation.current)return;
       const doc=new Yjs.Doc();const root=doc.getMap<unknown>("run");docRef.current=doc;rootRef.current=root;yRef.current=Yjs;
-      const pull=()=>{if(root.get("initialized")!==true)return;initializedRef.current=true;setHasSnapshot(true);const incoming=readSharedRun(root,runRef.current,Yjs);writeCache(nextCredentials,incoming);if(!sameSharedRun(incoming,runRef.current)){applyingRemote.current=true;applyRun(incoming);}setStatus(navigator.onLine?(peersRef.current?"connected":"waiting"):"offline");};
+      const pull=()=>{if(root.get("initialized")!==true)return;initializedRef.current=true;setHasSnapshot(true);const incoming=readSharedRun(root,runRef.current,Yjs);lastRemoteRef.current=incoming;writeCache(nextCredentials,incoming);if(!sameSharedRun(incoming,runRef.current)){applyingRemote.current=true;applyRun(incoming);}setStatus(navigator.onLine?(peersRef.current?"connected":"waiting"):"offline");};
       root.observeDeep(pull);
-      if(seed){writeSharedRun(root,seed,Yjs);initializedRef.current=true;setHasSnapshot(true);writeCache(nextCredentials,seed);}
-      const localPreview=["terminal.local","localhost","127.0.0.1"].includes(location.hostname);if(!globalThis.crypto?.subtle&&!localPreview)throw new Error("Calculator Link requires HTTPS");
+      if(seed){lastRemoteRef.current=seed;initializedRef.current=true;setHasSnapshot(true);writeCache(nextCredentials,seed);if(nextCredentials.role==="editor")writeSharedRun(root,seed,Yjs);else if(!sameSharedRun(seed,runRef.current)){applyingRemote.current=true;applyRun(seed);}}
+      const localPreview=["terminal.local","localhost","127.0.0.1"].includes(location.hostname);if(!globalThis.crypto?.subtle&&!localPreview)throw new Error("QuickLink requires HTTPS");
       const provider=new WebrtcProvider(`nullscape-calculator-${nextCredentials.room}`,doc,{password:globalThis.crypto?.subtle?nextCredentials.password:undefined,maxConns:24,signaling:signalingServers});providerRef.current=provider;
       const ownParticipant=participantId();
-      const scheduleReconnect=()=>{if(reconnectTimerRef.current!==null||attempt!==generation.current||peersRef.current>0||!navigator.onLine)return;const delay=reconnectDelays[Math.min(reconnectAttemptRef.current,reconnectDelays.length-1)];reconnectTimerRef.current=window.setTimeout(()=>{reconnectTimerRef.current=null;if(attempt!==generation.current||peersRef.current>0||!navigator.onLine)return;reconnectAttemptRef.current++;provider.disconnect();provider.connect();provider.awareness.setLocalStateField("nullscape",{participantId:ownParticipant,joinedAt:Date.now()});scheduleReconnect();},delay);};
-      const updatePresence=()=>{const participants=new Set<string>();provider.awareness.getStates().forEach((state,clientId)=>{const presence=state.nullscape as {participantId?:unknown}|undefined;if(!presence)return;participants.add(typeof presence.participantId==="string"&&/^[A-Za-z0-9_-]{16}$/.test(presence.participantId)?presence.participantId:`legacy-${clientId}`);});const count=participants.size;peersRef.current=count;setPeers(count);setStatus(navigator.onLine?(initializedRef.current?(count?"connected":"waiting"):"joining"):"offline");if(count){reconnectAttemptRef.current=0;if(reconnectTimerRef.current!==null)window.clearTimeout(reconnectTimerRef.current);reconnectTimerRef.current=null;}else scheduleReconnect();};
-      provider.awareness.on("change",updatePresence);provider.awareness.setLocalStateField("nullscape",{participantId:ownParticipant,joinedAt:Date.now()});updatePresence();
+      const scheduleReconnect=()=>{if(reconnectTimerRef.current!==null||attempt!==generation.current||remotePresenceRef.current>0||!navigator.onLine)return;const delay=reconnectDelays[Math.min(reconnectAttemptRef.current,reconnectDelays.length-1)];reconnectTimerRef.current=window.setTimeout(()=>{reconnectTimerRef.current=null;if(attempt!==generation.current||remotePresenceRef.current>0||!navigator.onLine)return;reconnectAttemptRef.current++;provider.disconnect();provider.connect();provider.awareness.setLocalStateField("nullscape",{participantId:ownParticipant,role:nextCredentials.role,joinedAt:Date.now()});scheduleReconnect();},delay);};
+      const updatePresence=()=>{const participants=new Set<string>();let remoteCount=0;provider.awareness.getStates().forEach((state,clientId)=>{const presence=state.nullscape as {participantId?:unknown;role?:unknown}|undefined;if(!presence)return;if(clientId!==provider.awareness.clientID)remoteCount++;if(presence.role==="spectator")return;participants.add(typeof presence.participantId==="string"&&/^[A-Za-z0-9_-]{16}$/.test(presence.participantId)?presence.participantId:`legacy-${clientId}`);});const count=participants.size;peersRef.current=count;remotePresenceRef.current=remoteCount;setPeers(count);setStatus(navigator.onLine?(initializedRef.current?(count?"connected":"waiting"):"joining"):"offline");if(remoteCount){reconnectAttemptRef.current=0;if(reconnectTimerRef.current!==null)window.clearTimeout(reconnectTimerRef.current);reconnectTimerRef.current=null;}else scheduleReconnect();};
+      provider.awareness.on("change",updatePresence);provider.awareness.setLocalStateField("nullscape",{participantId:ownParticipant,role:nextCredentials.role,joinedAt:Date.now()});updatePresence();
       const online=()=>{setStatus(initializedRef.current?(peersRef.current?"connected":"waiting"):"joining");scheduleReconnect();};const offline=()=>setStatus("offline");const listenerController=new AbortController();window.addEventListener("online",online,{signal:listenerController.signal});window.addEventListener("offline",offline,{signal:listenerController.signal});doc.on("destroy",()=>{provider.awareness.off("change",updatePresence);listenerController.abort();});
       pull();window.setTimeout(()=>{if(attempt===generation.current&&!initializedRef.current)setStatus(navigator.onLine?"waiting":"offline");},5000);
-    }catch(error){if(attempt!==generation.current)return;console.error("Calculator Link failed to start",error);setStatus("error");setMessage("Couldn’t start the live link. Check your connection and try again.");}
+    }catch(error){if(attempt!==generation.current)return;console.error("QuickLink failed to start",error);setStatus("error");setMessage("Couldn’t start the live link. Check your connection and try again.");}
   },[applyRun,onActiveChange,stopProvider]);
 
-  useEffect(()=>{runRef.current=run;const root=rootRef.current,Yjs=yRef.current,currentCredentials=credentialsRef.current;if(!root||!Yjs||!currentCredentials||root.get("initialized")!==true)return;if(applyingRemote.current){applyingRemote.current=false;writeCache(currentCredentials,run);return;}writeSharedRun(root,run,Yjs);writeCache(currentCredentials,run);},[run]);
+  useEffect(()=>{runRef.current=run;const root=rootRef.current,Yjs=yRef.current,currentCredentials=credentialsRef.current;if(!root||!Yjs||!currentCredentials||root.get("initialized")!==true)return;if(applyingRemote.current){applyingRemote.current=false;writeCache(currentCredentials,run);return;}if(currentCredentials.role==="spectator"){const shared=lastRemoteRef.current;if(shared&&!sameSharedRun(shared,run)){applyingRemote.current=true;applyRun(shared);}return;}writeSharedRun(root,run,Yjs);writeCache(currentCredentials,run);},[applyRun,run]);
   useEffect(()=>{
     if(typeof BroadcastChannel==="undefined")return;
     if(!tabIdRef.current)tabIdRef.current=randomToken(12);
@@ -126,19 +130,20 @@ export function CalculatorLink({run,applyRun,onActiveChange}:{run:SharedRun;appl
   useEffect(()=>{const fromUrl=credentialsFromLocation();const cached=readCache();const chosen=fromUrl??cached?.credentials;const timer=chosen?window.setTimeout(()=>{const seed=cached&&sameCredentials(cached.credentials,chosen)?cached.snapshot:undefined;void start(chosen,seed);},0):null;return()=>{if(timer!==null)clearTimeout(timer);stopProvider();};},[start,stopProvider]);
   useEffect(()=>{if(!open)return;const escape=(event:KeyboardEvent)=>{if(event.key==="Escape")setOpen(false);};window.addEventListener("keydown",escape);return()=>window.removeEventListener("keydown",escape);},[open]);
 
-  const create=async()=>{const next={room:randomToken(12),password:randomToken(32)};await start(next,runRef.current);const copied=await copyText(inviteUrl(next));setMessage(copied?"Invite copied — send it to your friends.":"Session created. Use Copy invite to share it.");};
-  const join=()=>{const parsed=parseCalculatorLink(joinValue);if(!parsed){setMessage("That doesn’t look like a Calculator Link.");return;}const cached=readCache();void start(parsed,cached&&sameCredentials(cached.credentials,parsed)?cached.snapshot:undefined);setJoinValue("");setMessage("");};
-  const copyInvite=async()=>{if(!credentials)return;const copied=await copyText(inviteUrl(credentials));setMessage(copied?"Invite copied.":"Copy failed — select the invite below manually.");};
-  const statusText=status==="connected"?`${peers} participant${peers===1?"":"s"} connected`:status==="offline"?"Offline — reconnects automatically":status==="error"?"Link unavailable":status==="joining"?"Finding the session…":"Waiting for friends…";
+  const create=async()=>{const next:Credentials={room:randomToken(12),password:randomToken(32),role:"editor"};await start(next,runRef.current);const copied=await copyText(inviteUrl(next));setMessage(copied?"Editor invite copied — send it to your lobby.":"QuickLink created. Use Copy editor invite to share it.");};
+  const join=()=>{const parsed=parseCalculatorLink(joinValue);if(!parsed){setMessage("That doesn’t look like a QuickLink.");return;}const cached=readCache();void start(parsed,cached&&sameCredentials(cached.credentials,parsed)?cached.snapshot:undefined);setJoinValue("");setMessage("");};
+  const copyInvite=async(spectator=false)=>{if(!credentials)return;const target=spectator?asSpectator(credentials):credentials;const copied=await copyText(inviteUrl(target));setMessage(copied?(spectator?"Spectator link copied — viewers cannot edit or count as lobby participants.":"Editor invite copied."):"Copy failed — select the link below manually.");};
+  const isSpectator=credentials?.role==="spectator";
+  const statusText=status==="connected"?(isSpectator?`Watching ${peers} lobby participant${peers===1?"":"s"}`:`${peers} lobby participant${peers===1?"":"s"} connected`):status==="offline"?"Offline — reconnects automatically":status==="error"?"QuickLink unavailable":status==="joining"?"Finding the session…":"Waiting for friends…";
 
   return <>
-    <button className={`calculator-link-button ${status!=="off"?"active":""}`} data-tour="calculator-link" onClick={()=>setOpen(true)}><i aria-hidden="true"/>{status==="off"?"Calculator Link":peers?`${peers} linked`:"Link active"}</button>
+    <button className={`calculator-link-button ${status!=="off"?"active":""}`} data-tour="calculator-link" onClick={()=>setOpen(true)}><i aria-hidden="true"/>{status==="off"?"QuickLink":isSpectator?"Spectating":peers?`${peers} linked`:"Link active"}</button>
     {open&&<div className="calculator-link-layer" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setOpen(false);}}><section className="calculator-link-dialog" role="dialog" aria-modal="true" aria-labelledby="calculator-link-title">
-      <button className="calculator-link-close" onClick={()=>setOpen(false)} aria-label="Close Calculator Link">×</button>
-      <small>LIVE RUN SHARING</small><h2 id="calculator-link-title">Calculator Link</h2>
-      {status==="off"?<><p>Create one shared run, then send the invite to your friends. Golden Gifts, level, lobby data, enemies, Curses, and upgrades update for everyone.</p><button className="link-primary" onClick={create}>Create &amp; copy invite</button><div className="link-divider"><span>OR JOIN ONE</span></div><div className="link-join"><input value={joinValue} onChange={event=>setJoinValue(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")join();}} placeholder="Paste invite link or session code" aria-label="Calculator Link invite"/><button onClick={join}>Join</button></div></>:<><div className={`link-status ${status}`}><i/><span><b>{statusText}</b><small>{status==="waiting"&&!hasSnapshot?"Someone with the run needs to open the link.":"Changes sync automatically while this tab is open."}</small></span></div><label className="link-invite"><span>INVITE</span><input readOnly value={credentials?inviteUrl(credentials):""} onFocus={event=>event.currentTarget.select()}/></label><div className="link-session-actions"><button className="link-primary" onClick={copyInvite}>Copy invite</button><button className="link-disconnect" onClick={()=>disconnect()}>Disconnect</button></div></>}
+      <button className="calculator-link-close" onClick={()=>setOpen(false)} aria-label="Close QuickLink">×</button>
+      <small>LIVE RUN SHARING</small><h2 id="calculator-link-title">QuickLink</h2>
+      {status==="off"?<><p>Create one shared run, then send an editor invite to your lobby or a view-only spectator link to everyone else.</p><button className="link-primary" onClick={create}>Create &amp; copy editor invite</button><div className="link-divider"><span>OR JOIN ONE</span></div><div className="link-join"><input value={joinValue} onChange={event=>setJoinValue(event.target.value)} onKeyDown={event=>{if(event.key==="Enter")join();}} placeholder="Paste QuickLink or session code" aria-label="QuickLink invite"/><button onClick={join}>Join</button></div></>:<><div className={`link-status ${status}`}><i/><span><b>{statusText}</b><small>{status==="waiting"&&!hasSnapshot?"Someone with the run needs to open the link.":isSpectator?"View only — your local clicks cannot change the shared run.":"Changes sync automatically while this tab is open."}</small></span></div><label className="link-invite"><span>{isSpectator?"SPECTATOR LINK":"EDITOR INVITE"}</span><input readOnly value={credentials?inviteUrl(credentials):""} onFocus={event=>event.currentTarget.select()}/></label>{!isSpectator&&<label className="link-invite"><span>SPECTATOR LINK · VIEW ONLY</span><input readOnly value={credentials?inviteUrl(asSpectator(credentials)):""} onFocus={event=>event.currentTarget.select()}/></label>}<div className="link-session-actions"><button className="link-primary" onClick={()=>copyInvite(isSpectator)}>{isSpectator?"Copy spectator link":"Copy editor invite"}</button>{!isSpectator&&<button className="link-primary" onClick={()=>copyInvite(true)}>Copy spectator link</button>}<button className="link-disconnect" onClick={()=>disconnect()}>Disconnect</button></div></>}
       {message&&<p className="link-message" role="status">{message}</p>}
-      <footer><b>Built-in failsafes</b><span>Different fields merge · reconnects after brief dropouts · invite data is encrypted · device history and sorting stay private.</span><em>Everyone with the invite can edit. If two people change the same value together, the session resolves it consistently.</em></footer>
+      <footer><b>Built-in failsafes</b><span>Different fields merge · reconnects automatically · invite data is encrypted · device history and sorting stay private.</span><em>Editor invites can change the run. Spectator links are view-only and do not count as lobby participants.</em></footer>
     </section></div>}
   </>;
 }
