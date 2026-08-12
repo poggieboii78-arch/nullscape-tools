@@ -525,8 +525,37 @@
       "description": "Many Many Tier lists",
       "accent": "#7770ff",
       "published": true,
-      "techs": [],
-      "updatedAt": "2026-08-12T12:54:01.591Z"
+      "techs": [
+        {
+          "id": "section-msqhwsqs-9g9rh",
+          "kind": "separator",
+          "title": "Extreme"
+        },
+        {
+          "id": "tech-msqhwx79-839ns",
+          "slug": "extreme-overall-picks",
+          "title": "Extreme Overall Picks",
+          "icon": "",
+          "summary": "",
+          "published": true,
+          "updatedAt": "2026-08-12T19:42:05.589Z",
+          "blocks": [
+            {
+              "id": "block-msqhxi57-hth4x",
+              "type": "image",
+              "content": "",
+              "url": "https://i.imgur.com/TLJET2I.png",
+              "caption": "",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 90,
+              "countIn": 4,
+              "loop": true
+            }
+          ]
+        }
+      ],
+      "updatedAt": "2026-08-12T19:43:19.335Z"
     }
   ],
   "classOrderUpdatedAt": "2026-08-12T12:54:01.591Z"
