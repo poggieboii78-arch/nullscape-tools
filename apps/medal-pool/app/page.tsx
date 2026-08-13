@@ -143,6 +143,8 @@ export default function Home() {
   const [lastAction, setLastAction] = useState<string | null>(null);
   const [history, setHistory] = useState<RunSnapshot[]>([]);
   const [ready, setReady] = useState(false);
+  const quickLinkState=useMemo(()=>({showUpcoming,autoNextPick,lastAction,history}),[showUpcoming,autoNextPick,lastAction,history]);
+  const applyQuickLinkState=useCallback((state:Record<string,unknown>)=>{if(typeof state.showUpcoming==="boolean")setShowUpcoming(state.showUpcoming);if(typeof state.autoNextPick==="boolean")setAutoNextPick(state.autoNextPick);if(typeof state.lastAction==="string"||state.lastAction===null)setLastAction(state.lastAction as string|null);if(Array.isArray(state.history)){const valid=state.history.filter((item):item is RunSnapshot=>{if(!item||typeof item!=="object")return false;const value=item as Partial<RunSnapshot>;return typeof value.level==="number"&&(value.difficulty==="casual"||value.difficulty==="standard"||value.difficulty==="extreme")&&!!value.owned&&typeof value.owned==="object";});setHistory(valid.slice(-100));}},[]);
 
   useEffect(() => {
     try {
@@ -330,7 +332,7 @@ export default function Home() {
           <a href="https://nullscape.wiki/wiki/Medal" target="_blank" rel="noreferrer">Medal mechanics ↗</a>
         </footer>
       </div>
-      <RunDock run={run} update={updateRun} reset={reset} applyLinkedRun={applyLinkedRun} toolId="medal" toolSteps={[
+      <RunDock run={run} update={updateRun} reset={reset} applyLinkedRun={applyLinkedRun} toolId="medal" quickLinkState={quickLinkState} applyQuickLinkState={applyQuickLinkState} toolSteps={[
         {selector:"[data-tour='medal-progress']",title:"A Medal is not the same as a Medal Curse",text:"Collecting a Medal always gives Gifts. You only get an extra Medal Curse choice if the later intermission has a normal Curse shop. A Greater Curse shop can replace it."},
         {selector:"[data-tour='medal-level-bubbles']",title:"Follow the three bubbles",text:"Left: the Medal pool being checked. Middle: the level where you can collect the Medal. Right: the later intermission where its Medal Curse choice can appear."},
         {selector:"[data-tour='medal-pool']",title:"Some choices can be regular Curses",text:"The game tries to offer three choices. If fewer than three difficult Medal Curses are possible, regular Curses may fill the empty spaces. Those still work and pay like normal Curses."},

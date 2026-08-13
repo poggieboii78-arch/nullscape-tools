@@ -3,7 +3,7 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CalculatorLink } from "./calculator-link";
+import { CalculatorLink, type QuickLinkToolState } from "./calculator-link";
 
 export type Difficulty = "casual" | "standard" | "extreme";
 export type Party = "solo" | "duo" | "party" | "party-plus";
@@ -220,7 +220,7 @@ type TourStep={selector:string;title:string;text:string};
 type DockTab="run"|"enemies"|"curses"|"medal"|"greater"|"upgrades";
 const tabLabels:Record<DockTab,string>={run:"Run Data",enemies:"Enemies",curses:"Curses",medal:"Medal Curses",greater:"Greater",upgrades:"Upgrades"};
 
-export function RunDock({run,update,reset,applyLinkedRun,toolId,toolSteps=[]}:{run:SharedRun;update:(change:Partial<SharedRun>|((current:SharedRun)=>Partial<SharedRun>))=>void;reset:()=>void;applyLinkedRun:(run:SharedRun)=>void;toolId:string;toolSteps?:TourStep[]}){
+export function RunDock({run,update,reset,applyLinkedRun,toolId,quickLinkState,applyQuickLinkState,toolSteps=[]}:{run:SharedRun;update:(change:Partial<SharedRun>|((current:SharedRun)=>Partial<SharedRun>))=>void;reset:()=>void;applyLinkedRun:(run:SharedRun)=>void;toolId:string;quickLinkState?:QuickLinkToolState;applyQuickLinkState?:(state:QuickLinkToolState)=>void;toolSteps?:TourStep[]}){
   const [open,setOpen]=useState(false);const [tab,setTab]=useState<DockTab>("run");const [search,setSearch]=useState("");const [checkPossible,setCheckPossible]=useState(true);const [tour,setTour]=useState(-1);const [historyOpen,setHistoryOpen]=useState(false);const [linkActive,setLinkActive]=useState(false);const [focusRect,setFocusRect]=useState<{left:number;top:number;width:number;height:number}|null>(null);const seenKey=`nullscape-tour-seen-${toolId}-${toolId==="home"?"v11":"v10"}`;const activity=useActivityState();const archives=useArchiveState();
   const steps=useMemo<TourStep[]>(()=>[
     ...(toolId==="home"?[
@@ -252,7 +252,7 @@ export function RunDock({run,update,reset,applyLinkedRun,toolId,toolSteps=[]}:{r
     <aside className={`run-dock ${open?"open":""}`}>
       <button className="run-dock-handle" data-tour="dock-handle" onClick={()=>setOpen(value=>!value)} aria-label={open?"Close Quick Menu":"Open Quick Menu"}><span aria-hidden="true">{open?"⌄":"⌃"}</span></button>
       <div className="run-dock-body" data-tour="dock-body">
-        <div className="dock-top"><div><strong>Quick Menu</strong><span>Newest edits sync across tabs and linked friends</span></div><div className="dock-actions"><CalculatorLink run={run} applyRun={applyLinkedRun} onActiveChange={setLinkActive}/><button onClick={()=>setTour(0)}>Walkthrough</button><button className="reset-run" onClick={()=>{if(!linkActive||confirm("Reset the shared run for everyone in this QuickLink?"))reset();}}>Reset run</button></div></div>
+        <div className="dock-top"><div><strong>Quick Menu</strong><span>Newest edits sync across tabs and linked friends</span></div><div className="dock-actions"><CalculatorLink run={run} applyRun={applyLinkedRun} toolId={toolId} toolState={quickLinkState} applyToolState={applyQuickLinkState} onActiveChange={setLinkActive}/><button onClick={()=>setTour(0)}>Walkthrough</button><button className="reset-run" onClick={()=>{if(!linkActive||confirm("Reset the shared run for everyone in this QuickLink?"))reset();}}>Reset run</button></div></div>
         <div className="input-mode"><span>EDIT FROM</span>{([['quick','Quick menu'],['both','Both'],['tool','Tool page']] as [InputMode,string][]).map(([mode,label])=><button key={mode} className={run.inputMode===mode?"active":""} onClick={()=>update({inputMode:mode})}>{label}</button>)}</div>
         <div className="dock-tab-row"><nav className="dock-tabs" aria-label="Quick Menu sections">{(Object.keys(tabLabels) as DockTab[]).map(item=><button key={item} className={tab===item?"active":""} onClick={()=>{setTab(item);setSearch("");}}>{tabLabels[item]}<small>{item==="enemies"?total(run.enemies):item==="curses"?total(run.curses):item==="medal"?total(run.medalCurses):item==="greater"?total(run.greaterCurses):item==="upgrades"?total(run.upgrades):""}</small></button>)}</nav><button className={`dock-next-level ${(expectedEnemies===0||currentEnemyCount>=expectedEnemies)&&currentCurseCount>0?"ready":""}`} disabled={run.inputMode==="tool"} onClick={()=>update({level:run.level+1})} title={`Advance from Level ${run.level} to Level ${run.level+1}. Recorded here: ${currentEnemyCount} enemies and ${currentCurseCount} Curse picks.`} aria-label={`Next intermission, Level ${run.level+1}`}><span>NEXT</span><b>→ L{run.level+1}</b></button></div>
         <div className={`dock-content ${quickLocked?"quick-locked":""}`}>

@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RunDock, ToolRunFields, useSharedRun, type SharedRun } from "./run-dock";
 
 type Upgrade={name:string;cost:number;max:number;minLevel:number;description:string;costCasual?:number;costExtreme?:number;costSolo?:number;minLevelCasual?:number;stackCosts?:number[];stackCostsCasual?:number[];stackCostsExtreme?:number[];stackCostsSolo?:number[];requires?:[string,number];enemy?:string;soloDiscount?:number};
@@ -77,6 +77,8 @@ function nextShopLevel(level:number){let next=Math.max(3,level+1);while(![0,3,5,
 export default function Home(){
  const {run,update,reset,applyLinkedRun}=useSharedRun("nullscape-shop-state-v1");
  const [selected,setSelected]=useState<string[]>([]);const [search,setSearch]=useState("");const [autoNextShop,setAutoNextShop]=useState(false);const locked=run.inputMode==="quick";
+ const quickLinkState=useMemo(()=>({selected,autoNextShop}),[selected,autoNextShop]);
+ const applyQuickLinkState=useCallback((state:Record<string,unknown>)=>{if(Array.isArray(state.selected))setSelected(state.selected.filter((name):name is string=>typeof name==="string"&&upgrades.some(item=>item.name===name)));if(typeof state.autoNextShop==="boolean")setAutoNextShop(state.autoNextShop);},[]);
  useEffect(()=>{try{setAutoNextShop(localStorage.getItem("nullscape-shop-auto-next")==="1");}catch{}},[]);
  useEffect(()=>{try{localStorage.setItem("nullscape-shop-auto-next",autoNextShop?"1":"0");}catch{}},[autoNextShop]);
  const shop=useMemo(()=>upgrades.filter(item=>visible(item,run)&&owned(run,item.name)<item.max&&run.level>=(run.difficulty==="casual"?(item.minLevelCasual??item.minLevel):item.minLevel)&&!requirement(item,run)).filter(item=>item.name.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>a.minLevel-b.minLevel||price(a,run)-price(b,run)),[run,search]);
@@ -94,6 +96,6 @@ export default function Home(){
    <details className="rules"><summary>Pricing rules <span>＋</span></summary><p>Uses each upgrade's difficulty and stack costs, then scales by √players. Party+ divides prices by 1.125. Nothing? applies its 15% shop discount. Final prices round up.</p></details>
   </section>
   <footer><p>Data checked against the Nullscape Wiki and the original calculator by Sticks. <span className="llm-disclaimer">Made with help from an LLM.</span></p><a href="https://stickstetris.github.io/NullscapeShopCalculator/" target="_blank" rel="noreferrer">Original calculator ↗</a></footer>
-  <RunDock run={run} update={update} reset={resetTool} applyLinkedRun={applyLinkedRun} toolId="shop" toolSteps={[{selector:"[data-tour='shop-summary']",title:"See what you can afford",text:"This shows your Gifts, the cost of your selected upgrades, and what you will have left. Auto-next can move to the next scheduled shop after you buy."},{selector:"[data-tour='owned-upgrades']",title:"Enter the upgrades you already own",text:"Click an upgrade icon until its stack count matches your run. This lets the calculator show the correct next price and hide upgrades you cannot get."},{selector:"[data-tour='shop-grid']",title:"Plan what to buy",text:"Choose the upgrades you want from the available list. When the plan looks right, press Purchase to add them to your run."}]}/>
+  <RunDock run={run} update={update} reset={resetTool} applyLinkedRun={applyLinkedRun} toolId="shop" quickLinkState={quickLinkState} applyQuickLinkState={applyQuickLinkState} toolSteps={[{selector:"[data-tour='shop-summary']",title:"See what you can afford",text:"This shows your Gifts, the cost of your selected upgrades, and what you will have left. Auto-next can move to the next scheduled shop after you buy."},{selector:"[data-tour='owned-upgrades']",title:"Enter the upgrades you already own",text:"Click an upgrade icon until its stack count matches your run. This lets the calculator show the correct next price and hide upgrades you cannot get."},{selector:"[data-tour='shop-grid']",title:"Plan what to buy",text:"Choose the upgrades you want from the available list. When the plan looks right, press Purchase to add them to your run."}]}/>
  </main>;
 }
