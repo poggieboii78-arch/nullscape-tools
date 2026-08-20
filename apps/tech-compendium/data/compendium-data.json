@@ -207,8 +207,32 @@
       "description": "",
       "accent": "#7770ff",
       "published": true,
-      "techs": [],
-      "updatedAt": "2026-08-09T13:06:18.090Z"
+      "techs": [
+        {
+          "id": "tech-mt227rcb-obqfn",
+          "slug": "ultra-wave-dash-or-something",
+          "title": "Ultra Wave Dash Or Something",
+          "icon": "",
+          "summary": "",
+          "published": true,
+          "updatedAt": "2026-08-20T21:55:51.467Z",
+          "blocks": [
+            {
+              "id": "block-mt227ty0-yrgla",
+              "type": "metronome",
+              "content": "W + M1\nSpace\nM2\nM1\n",
+              "url": "",
+              "caption": "Practice the sequence in time",
+              "secondaryUrl": "",
+              "secondaryCaption": "",
+              "bpm": 300,
+              "countIn": 4,
+              "loop": true
+            }
+          ]
+        }
+      ],
+      "updatedAt": "2026-08-20T21:56:51.932Z"
     },
     {
       "id": "class-msl0qxk7-otla8",
