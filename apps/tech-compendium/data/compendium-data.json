@@ -220,7 +220,7 @@
             {
               "id": "block-mt227ty0-yrgla",
               "type": "metronome",
-              "content": "W + M1\nSpace\nM2\nM1\n",
+              "content": "W + M1\n(5ms)\nSpace\n(5ms)\nM2\n(5ms)\nM1\n",
               "url": "",
               "caption": "Practice the sequence in time",
               "secondaryUrl": "",
@@ -232,7 +232,7 @@
           ]
         }
       ],
-      "updatedAt": "2026-08-20T21:56:51.932Z"
+      "updatedAt": "2026-08-20T22:01:51.893Z"
     },
     {
       "id": "class-msl0qxk7-otla8",
