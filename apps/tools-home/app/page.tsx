@@ -10,6 +10,7 @@ const checkerUrl="/nullscape-tools/medal/";
 const altarUrl="/nullscape-tools/altar/";
 const shopUrl="/nullscape-tools/shop/";
 const progressionUrl="/nullscape-tools/progression/";
+const lobbyStylerUrl="/nullscape-tools/lobby-styler/";
 const compendiumUrl="/nullscape-tools/compendium/";
 const medalIcon="https://nullscape.wiki/wiki/Special:Redirect/file/Medal.png";
 const altarIcon="https://nullscape.wiki/wiki/Special:Redirect/file/MoreAltars.png";
@@ -27,12 +28,13 @@ export default function Home(){
     <div className="shell" id="top">
       <section className="intro"><p className="eyebrow">RUN TOOLS</p><h1>Useful stuff.<br/><span>No clutter.</span></h1><p className="lede">Open the Quick Menu once, set the run, and every tool uses the newest version.</p></section>
       <section className="tools" aria-labelledby="tools-heading" data-tour="tool-cards">
-        <div className="section-heading"><div><p className="eyebrow">RUN TOOLS</p><h2 id="tools-heading">Pick a calculator</h2></div><span>4 TOOLS</span></div>
+        <div className="section-heading"><div><p className="eyebrow">RUN TOOLS</p><h2 id="tools-heading">Pick a calculator</h2></div><span>5 TOOLS</span></div>
         <div className="tool-list">
           <a className="tool-card" href={`${checkerUrl}?${query}`}><span className="tool-icon"><img src={medalIcon} alt="Medal Curse icon"/></span><span className="tool-copy"><span className="tool-kicker">RUN PLANNER</span><strong>Medal Pool Checker</strong><span>See eligible Medal Curses from your level, enemies, and active curses.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
           <a className="tool-card altar-card" href={`${altarUrl}?${query}`}><span className="tool-icon"><img src={altarIcon} alt="More Altars icon"/></span><span className="tool-copy"><span className="tool-kicker">PRICE + ODDS</span><strong>Altar Calculator</strong><span>Check Protection, Purification priority, and possible Chance outcomes.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
           <a className="tool-card shop-card" href={`${shopUrl}?${query}`}><span className="tool-icon"><img src={shopIcon} alt="Business License icon"/></span><span className="tool-copy"><span className="tool-kicker">UPGRADE PLANNER</span><strong>Shop Calculator</strong><span>See eligible upgrades, exact stack prices, prerequisites, and plan purchases.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
           <a className="tool-card predictor-card" href={`${progressionUrl}?${query}`}><span className="tool-icon predictor-icon" aria-hidden="true">⌁</span><span className="tool-copy"><span className="tool-kicker">EVENT FORECAST</span><strong>Progression Event Predictor</strong><span>See fixed progression breakpoints and the next active event for your run.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
+          <a className="tool-card lobby-card" href={`${lobbyStylerUrl}?${query}`}><span className="tool-icon lobby-icon" aria-hidden="true">Aa</span><span className="tool-copy"><span className="tool-kicker">VIP / RICHTEXT</span><strong>Lobby Name Styler</strong><span>Style a Roblox VIP lobby name with RichText colors, fonts, formatting, and strokes.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
         </div>
       </section>
       <section className="resources" aria-labelledby="resources-heading">
