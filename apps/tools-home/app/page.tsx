@@ -5,11 +5,11 @@
 import { useMemo } from "react";
 import { buildRunQuery, RunDock, useSharedRun } from "./run-dock";
 import { MiniMinesweeper } from "./mini-minesweeper";
-import { ProgressionEventPredictor } from "./progression-event-predictor";
 
 const checkerUrl="/nullscape-tools/medal/";
 const altarUrl="/nullscape-tools/altar/";
 const shopUrl="/nullscape-tools/shop/";
+const progressionUrl="/nullscape-tools/progression/";
 const compendiumUrl="/nullscape-tools/compendium/";
 const medalIcon="https://nullscape.wiki/wiki/Special:Redirect/file/Medal.png";
 const altarIcon="https://nullscape.wiki/wiki/Special:Redirect/file/MoreAltars.png";
@@ -32,10 +32,9 @@ export default function Home(){
           <a className="tool-card" href={`${checkerUrl}?${query}`}><span className="tool-icon"><img src={medalIcon} alt="Medal Curse icon"/></span><span className="tool-copy"><span className="tool-kicker">RUN PLANNER</span><strong>Medal Pool Checker</strong><span>See eligible Medal Curses from your level, enemies, and active curses.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
           <a className="tool-card altar-card" href={`${altarUrl}?${query}`}><span className="tool-icon"><img src={altarIcon} alt="More Altars icon"/></span><span className="tool-copy"><span className="tool-kicker">PRICE + ODDS</span><strong>Altar Calculator</strong><span>Check Protection, Purification priority, and possible Chance outcomes.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
           <a className="tool-card shop-card" href={`${shopUrl}?${query}`}><span className="tool-icon"><img src={shopIcon} alt="Business License icon"/></span><span className="tool-copy"><span className="tool-kicker">UPGRADE PLANNER</span><strong>Shop Calculator</strong><span>See eligible upgrades, exact stack prices, prerequisites, and plan purchases.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
-          <a className="tool-card predictor-card" href="#progression-predictor"><span className="tool-icon predictor-icon" aria-hidden="true">⌁</span><span className="tool-copy"><span className="tool-kicker">LEARNING FORECAST</span><strong>Progression Event Predictor</strong><span>Record random progression events and learn what is most likely to appear next.</span></span><span className="launch" aria-hidden="true">PREDICT <b>↓</b></span></a>
+          <a className="tool-card predictor-card" href={`${progressionUrl}?${query}`}><span className="tool-icon predictor-icon" aria-hidden="true">⌁</span><span className="tool-copy"><span className="tool-kicker">EVENT FORECAST</span><strong>Progression Event Predictor</strong><span>Track progression events and see what is most likely to appear next.</span></span><span className="launch" aria-hidden="true">OPEN <b>↗</b></span></a>
         </div>
       </section>
-      <ProgressionEventPredictor run={run}/>
       <section className="resources" aria-labelledby="resources-heading">
         <div className="section-heading"><div><p className="eyebrow">GUIDES &amp; REFERENCES</p><h2 id="resources-heading">Learn the game</h2></div><span>1 GUIDE</span></div>
         <div className="resource-list">
