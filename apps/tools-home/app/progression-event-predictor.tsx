@@ -1,175 +1,77 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { SharedRun } from "./run-dock";
 
-type EventRecord = {
+type ScheduleEvent = {
   id: string;
   name: string;
-  level: number;
-  difficulty: SharedRun["difficulty"];
-  enemies: string[];
-  at: number;
+  levels: number[];
+  detail: string;
+  enemy?: string;
+  modes?: SharedRun["difficulty"][];
 };
 
-const STORAGE_KEY = "nullscape-progression-events-v1";
-const observedEvents = [
-  "Ice Tiles",
-  "Mart Growth",
-  "Mart Infection",
-  "Enemy Duplication",
-  "More Enemies",
-];
-
-function normalizeName(value: string) {
-  return value.trim().replace(/\s+/g, " ");
-}
-
-function loadRecords(): EventRecord[] {
-  try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    if (!Array.isArray(value)) return [];
-    return value.filter((item): item is EventRecord =>
-      item && typeof item.name === "string" && typeof item.level === "number"
-    ).slice(-300);
-  } catch {
-    return [];
-  }
+function buildSchedule(difficulty: SharedRun["difficulty"]): ScheduleEvent[] {
+  const casual = difficulty === "Casual";
+  const extreme = difficulty === "Extreme";
+  return [
+    { id:"tripmines", name:"Tripmines begin", levels:[5], detail:"Tripmines enter map generation.", modes:["Standard","Extreme"] },
+    { id:"ice", name:"Ice Tiles begin", levels:[extreme ? 5 : 8], detail:"Ice tiles can begin appearing in generated maps." },
+    { id:"mart", name:"Mart Growth", levels:[6,12,18,24,30], detail:"Marts gain a larger default size and size cap.", enemy:"Mart" },
+    { id:"seamines", name:"Seamines begin", levels:[casual ? 15 : 10], detail:"Seamines can begin appearing in generated maps." },
+    { id:"husk", name:"More Husks", levels:[casual ? 15 : 10], detail:"Each active Husk stack gains another Husk.", enemy:"Husk" },
+    { id:"highrise", name:"Highrise Towers", levels:[18], detail:"Highrise tower tiles enter map generation." },
+    { id:"level50", name:"More Enemies", levels:[50], detail:"The hidden level-50 progression event adds more enemy pressure." },
+  ].filter(event => !event.modes || event.modes.includes(difficulty));
 }
 
 export function ProgressionEventPredictor({ run }: { run: SharedRun }) {
-  const [records, setRecords] = useState<EventRecord[]>([]);
-  const [eventName, setEventName] = useState("");
-  const [recordLevel, setRecordLevel] = useState(run.level);
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    setRecords(loadRecords());
-    setReady(true);
-  }, []);
-
-  useEffect(() => setRecordLevel(run.level), [run.level]);
-
-  useEffect(() => {
-    if (!ready) return;
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(-300))); } catch {}
-  }, [ready, records]);
-
-  const candidates = useMemo(() => {
-    const names = [...new Set([...observedEvents, ...records.map(item => item.name)])];
-    const compatible = records.filter(item =>
-      item.difficulty === run.difficulty && item.level <= run.level + 5
-    );
-    const last = records[records.length - 1];
-    const transitions = new Map<string, number>();
-    if (last) {
-      for (let index = 1; index < records.length; index += 1) {
-        if (records[index - 1].name === last.name) {
-          transitions.set(records[index].name, (transitions.get(records[index].name) || 0) + 1);
-        }
-      }
-    }
-
-    const activeEnemies = new Set(Object.keys(run.enemies).filter(name => run.enemies[name] > 0));
-    const scores = names.map(name => {
-      const sightings = compatible.filter(item => item.name === name);
-      const allSightings = records.filter(item => item.name === name);
-      const transitionHits = transitions.get(name) || 0;
-      const lastSeen = [...allSightings].reverse()[0];
-      const gap = lastSeen ? Math.max(0, run.level - lastSeen.level) : run.level;
-      const enemyMatches = sightings.reduce((sum, item) =>
-        sum + item.enemies.filter(enemy => activeEnemies.has(enemy)).length, 0
-      );
-      const repeatPenalty = last?.name === name ? 0.42 : 1;
-      const score = repeatPenalty * (
-        1 +
-        sightings.length * 2.2 +
-        transitionHits * 3 +
-        enemyMatches * 0.6 +
-        Math.min(gap, 12) * 0.08
-      );
-      return { name, score, sightings: allSightings.length, lastSeen };
-    }).sort((a, b) => b.score - a.score);
-
-    const total = scores.reduce((sum, item) => sum + item.score, 0) || 1;
-    return scores.slice(0, 5).map(item => ({
-      ...item,
-      chance: Math.round((item.score / total) * 100),
-    }));
-  }, [records, run.difficulty, run.enemies, run.level]);
-
-  const confidence = records.length < 6 ? "LOW" : records.length < 20 ? "LEARNING" : "TRAINED";
-
-  function addRecord() {
-    const name = normalizeName(eventName);
-    if (!name) return;
-    setRecords(current => [...current, {
-      id: crypto.randomUUID(),
-      name,
-      level: Math.max(1, Math.floor(recordLevel || run.level)),
-      difficulty: run.difficulty,
-      enemies: Object.keys(run.enemies).filter(enemy => run.enemies[enemy] > 0),
-      at: Date.now(),
-    }].slice(-300));
-    setEventName("");
-  }
-
-  function undo() {
-    setRecords(current => current.slice(0, -1));
-  }
-
-  function clear() {
-    if (window.confirm("Clear all recorded progression events?")) setRecords([]);
-  }
+  const [relevantOnly,setRelevantOnly]=useState(false);
+  const activeEnemies=useMemo(()=>new Set(Object.keys(run.enemies).filter(name=>run.enemies[name]>0)),[run.enemies]);
+  const entries=useMemo(()=>buildSchedule(run.difficulty)
+    .flatMap(event=>event.levels.map(level=>({...event,level,active:!event.enemy||activeEnemies.has(event.enemy)})))
+    .sort((a,b)=>a.level-b.level||a.name.localeCompare(b.name)),[run.difficulty,activeEnemies]);
+  const visible=entries.filter(event=>!relevantOnly||event.active);
+  const upcoming=entries.filter(event=>event.level>run.level&&event.active);
+  const nextLevel=upcoming[0]?.level;
+  const next=upcoming.filter(event=>event.level===nextLevel);
+  const until=nextLevel===undefined?null:nextLevel-run.level;
 
   return <section className="progression-predictor" id="progression-predictor" aria-labelledby="progression-heading">
     <header className="predictor-heading">
       <div>
-        <p className="eyebrow">RUN LEARNING TOOL</p>
+        <p className="eyebrow">FIXED EVENT SCHEDULE</p>
         <h2 id="progression-heading">Progression Event Predictor</h2>
-        <p>Record what appears. The predictor learns this device&apos;s runs and ranks what is most likely next.</p>
+        <p>Progression events use set level breakpoints. Difficulty changes some timings; your enemy roster controls which enemy events matter.</p>
       </div>
-      <span className={`confidence confidence-${confidence.toLowerCase()}`}>{confidence} · {records.length} EVENTS</span>
+      <span className="schedule-badge">{run.difficulty.toUpperCase()} · LEVEL {run.level}</span>
     </header>
 
-    <div className="predictor-layout">
-      <div className="prediction-panel">
-        <div className="prediction-context">
-          <span>FORECAST FOR</span>
-          <strong>Level {run.level + 1}</strong>
-          <small>{run.difficulty} · {Object.keys(run.enemies).filter(name => run.enemies[name] > 0).length} enemy types</small>
-        </div>
-        <div className="prediction-list">
-          {candidates.map((item, index) => <article key={item.name} className={index === 0 ? "top-prediction" : ""}>
-            <b>{index + 1}</b>
-            <span><strong>{item.name}</strong><small>{item.sightings ? `${item.sightings} recorded sighting${item.sightings === 1 ? "" : "s"}` : "No personal sightings yet"}</small></span>
-            <em>{item.chance}%</em>
-          </article>)}
-        </div>
-        <p className="prediction-disclaimer">These are learned estimates, not official odds. Early predictions are intentionally marked low confidence.</p>
+    <div className="next-event-card">
+      <div className="next-countdown">
+        <span>NEXT ACTIVE EVENT</span>
+        {nextLevel!==undefined ? <><strong>LEVEL {nextLevel}</strong><small>{until===1?"next level":until+" levels away"}</small></> : <><strong>SCHEDULE CLEAR</strong><small>No documented event after this level</small></>}
       </div>
-
-      <div className="event-recorder">
-        <span className="recorder-kicker">WHAT JUST APPEARED?</span>
-        <label>
-          <span>PROGRESSION EVENT</span>
-          <input list="progression-event-names" value={eventName} onChange={event => setEventName(event.target.value)} onKeyDown={event => { if (event.key === "Enter") addRecord(); }} placeholder="Choose or type an event"/>
-          <datalist id="progression-event-names">{[...new Set([...observedEvents, ...records.map(item => item.name)])].map(name => <option value={name} key={name}/>)}</datalist>
-        </label>
-        <label>
-          <span>LEVEL SEEN</span>
-          <input type="number" min={1} value={recordLevel} onChange={event => setRecordLevel(Math.max(1, Number(event.target.value) || 1))}/>
-        </label>
-        <button className="record-event" onClick={addRecord} disabled={!normalizeName(eventName)}>Record event <b>＋</b></button>
-        <div className="recorder-actions">
-          <button onClick={undo} disabled={!records.length}>Undo last</button>
-          <button onClick={clear} disabled={!records.length}>Clear data</button>
-        </div>
-        {records.length > 0 && <div className="recent-events">
-          <small>RECENT</small>
-          {[...records].reverse().slice(0, 4).map(item => <span key={item.id}><b>LVL {item.level}</b>{item.name}</span>)}
-        </div>}
+      <div className="next-event-list">
+        {next.length ? next.map(event=><article key={event.id}><b>{event.name}</b><span>{event.detail}</span></article>) : <article><b>No upcoming breakpoint</b><span>You are past the documented timeline shown here.</span></article>}
       </div>
     </div>
+
+    <div className="timeline-heading">
+      <div><span>FULL TIMELINE</span><small>Past, next, and upcoming fixed breakpoints</small></div>
+      <label><input type="checkbox" checked={relevantOnly} onChange={event=>setRelevantOnly(event.target.checked)}/> Only active for this run</label>
+    </div>
+    <div className="event-timeline">
+      {visible.map(event=>{
+        const state=event.level<=run.level?"passed":event.level===nextLevel&&event.active?"next":"upcoming";
+        return <article className={["timeline-event",state,event.active?"":"inactive"].join(" ")} key={event.id+"-"+event.level}>
+          <div className="timeline-level"><span>LVL</span><b>{event.level}</b></div>
+          <div className="timeline-copy"><strong>{event.name}</strong><span>{event.detail}</span>{event.enemy&&<small>{event.active?"ACTIVE · "+event.enemy+" selected":"INACTIVE · requires "+event.enemy}</small>}</div>
+          <em>{event.active?(state==="passed"?"PASSED":state==="next"?"NEXT":"UPCOMING"):"DORMANT"}</em>
+        </article>;
+      })}
+    </div>
+    <p className="schedule-note">Current documented schedule. Game updates can change breakpoints; enemy multiplier events without a verified current level are intentionally not guessed.</p>
   </section>;
 }
