@@ -13,10 +13,10 @@ type ScheduleEvent = {
 };
 
 function buildSchedule(difficulty: SharedRun["difficulty"]): ScheduleEvent[] {
-  const casual = difficulty === "Casual";
-  const extreme = difficulty === "Extreme";
+  const casual = difficulty === "casual";
+  const extreme = difficulty === "extreme";
   return [
-    { id:"tripmines", name:"Tripmines begin", levels:[5], detail:"Tripmines enter map generation.", modes:["Standard","Extreme"] },
+    { id:"tripmines", name:"Tripmines begin", levels:[5], detail:"Tripmines enter map generation.", modes:["standard","extreme"] },
     { id:"ice", name:"Ice Tiles begin", levels:[extreme ? 5 : 8], detail:"Ice tiles can begin appearing in generated maps." },
     { id:"mart", name:"Mart Growth", levels:[6,12,18,24,30], detail:"Marts gain a larger default size and size cap.", enemy:"Mart" },
     { id:"seamines", name:"Seamines begin", levels:[casual ? 15 : 10], detail:"Seamines can begin appearing in generated maps." },
