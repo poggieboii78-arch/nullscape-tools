@@ -12,6 +12,43 @@ const presets:{name:string;emoji:string;style:Partial<Style>}[]=[
   {name:"Clean",emoji:"✨",style:{bold:false,italic:false,underline:false,strike:false,color:"#FFFFFF",size:"24",face:"Gotham",stroke:false,strokeColor:"#000000",strokeThickness:"1"}},
 ];
 const faces=["Legacy","Arial","ArialBold","SourceSans","SourceSansBold","SourceSansLight","SourceSansItalic","Bodoni","Garamond","Cartoon","Code","Highway","SciFi","Arcade","Fantasy","Antique","SourceSansSemibold","Gotham","GothamMedium","GothamBold","GothamBlack","AmaticSC","Bangers","Creepster","FredokaOne","JosefinSans","Michroma","Roboto","RobotoCondensed","RobotoMono","Ubuntu","BuilderSans","BuilderSansMedium","BuilderSansBold","BuilderSansExtraBold"];
+const previewFontStacks:Record<string,string>={
+  Legacy:"Arial,sans-serif",
+  Arial:"Arial,sans-serif",
+  ArialBold:"Arial Black,Arial,sans-serif",
+  SourceSans:"Arial,sans-serif",
+  SourceSansBold:"Arial Black,Arial,sans-serif",
+  SourceSansLight:"Arial,sans-serif",
+  SourceSansItalic:"Arial,sans-serif",
+  Bodoni:"Bodoni 72,Didot,serif",
+  Garamond:"Garamond,serif",
+  Cartoon:"Comic Sans MS,cursive",
+  Code:"ui-monospace,SFMono-Regular,Menlo,monospace",
+  Highway:"Arial Narrow,Arial,sans-serif",
+  SciFi:"Orbitron,Arial,sans-serif",
+  Arcade:"Arial Black,Arial,sans-serif",
+  Fantasy:"Papyrus,fantasy",
+  Antique:"Georgia,serif",
+  SourceSansSemibold:"Arial,sans-serif",
+  Gotham:"Arial,sans-serif",
+  GothamMedium:"Arial,sans-serif",
+  GothamBold:"Arial Black,Arial,sans-serif",
+  GothamBlack:"Impact,Arial Black,Arial,sans-serif",
+  AmaticSC:"Amatic SC,cursive",
+  Bangers:"Bangers,Impact,cursive",
+  Creepster:"Creepster,Georgia,cursive",
+  FredokaOne:"Fredoka One,Arial,sans-serif",
+  JosefinSans:"Josefin Sans,Arial,sans-serif",
+  Michroma:"Michroma,Arial,sans-serif",
+  Roboto:"Roboto,Arial,sans-serif",
+  RobotoCondensed:"Roboto Condensed,Arial,sans-serif",
+  RobotoMono:"Roboto Mono,ui-monospace,monospace",
+  Ubuntu:"Ubuntu,Arial,sans-serif",
+  BuilderSans:"Arial,sans-serif",
+  BuilderSansMedium:"Arial,sans-serif",
+  BuilderSansBold:"Arial Black,Arial,sans-serif",
+  BuilderSansExtraBold:"Arial Black,Arial,sans-serif",
+};
 function escapeRichText(value:string){return value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&apos;");}
 function safeColor(value:string,fallback="#FFFFFF"){return /^#[0-9a-fA-F]{6}$/.test(value)?value.toUpperCase():fallback;}
 function hexToRgb(hex:string){const n=parseInt(hex.slice(1),16);return [n>>16,(n>>8)&255,n&255];}
@@ -25,7 +62,18 @@ function buildMarkup(text:string,style:Style,parts:Part[],mode:"single"|"parts"|
   else result=escapeRichText(text||"Your Lobby Name");
   return wrapStyle(result,style);
 }
-function previewMarkup(markup:string){return markup.replace(/<font color=\"(#[0-9a-fA-F]{6})\">/g,"<span style=\"color:$1\">").replace(/<font size=\"(\d+)\">/g,"<span style=\"font-size:${Math.min(64,Number($1))}px\">").replace(/<font face=\"([^\"]+)\">/g,"<span style=\"font-family:$1,sans-serif\">").replace(/<stroke color=\"(#[0-9a-fA-F]{6})\" thickness=\"([0-9.]+)\">/g,"<span style=\"-webkit-text-stroke:${$2}px $1\">").replace(/<\/(font|stroke)>/g,"</span>").replace(/<b>/g,"<strong>").replace(/<\/b>/g,"</strong>").replace(/<i>/g,"<em>").replace(/<\/i>/g,"</em>").replace(/<u>/g,"<span style=\"text-decoration:underline\">").replace(/<\/u>/g,"</span>").replace(/<s>/g,"<del>").replace(/<\/s>/g,"</del>");}
+function previewMarkup(markup:string){
+  return markup
+    .replace(/<font color=\"(#[0-9a-fA-F]{6})\">/g,"<span style=\"color:$1\">")
+    .replace(/<font size=\"(\d+)\">/g,"<span style=\"font-size:${Math.min(64,Number($1))}px\">")
+    .replace(/<font face=\"([^\"]+)\">/g,(_,face:string)=>`<span style=\"font-family:${previewFontStacks[face]??"Arial,sans-serif"}\" title=\"Roblox font: ${face}\">`)
+    .replace(/<stroke color=\"(#[0-9a-fA-F]{6})\" thickness=\"([0-9.]+)\">/g,"<span style=\"-webkit-text-stroke:${$2}px $1\">")
+    .replace(/<\/(font|stroke)>/g,"</span>")
+    .replace(/<b>/g,"<strong>").replace(/<\/b>/g,"</strong>")
+    .replace(/<i>/g,"<em>").replace(/<\/i>/g,"</em>")
+    .replace(/<u>/g,"<span style=\"text-decoration:underline\">").replace(/<\/u>/g,"</span>")
+    .replace(/<s>/g,"<del>").replace(/<\/s>/g,"</del>");
+}
 
 export default function LobbyStyler(){
   const [text,setText]=useState("VIP Lobby");
