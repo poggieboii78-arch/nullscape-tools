@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import styles from "./lobby-styler.module.css";
 
 type Style={bold:boolean;italic:boolean;underline:boolean;strike:boolean;color:string;size:string;face:string;stroke:boolean;strokeColor:string;strokeThickness:string};
-type Part={text:string;color:string};
+type Part={text:string;color:string;face:string};
 const presets:{name:string;emoji:string;style:Partial<Style>}[]=[
   {name:"VIP Gold",emoji:"👑",style:{bold:true,italic:false,color:"#FFD700",size:"24",face:"GothamBold",stroke:true,strokeColor:"#5A3A00",strokeThickness:"1"}},
   {name:"Void",emoji:"🟣",style:{bold:true,italic:true,color:"#B46CFF",size:"24",face:"GothamBold",stroke:true,strokeColor:"#160B22",strokeThickness:"2"}},
@@ -13,41 +13,7 @@ const presets:{name:string;emoji:string;style:Partial<Style>}[]=[
 ];
 const faces=["Legacy","Arial","ArialBold","SourceSans","SourceSansBold","SourceSansLight","SourceSansItalic","Bodoni","Garamond","Cartoon","Code","Highway","SciFi","Arcade","Fantasy","Antique","SourceSansSemibold","Gotham","GothamMedium","GothamBold","GothamBlack","AmaticSC","Bangers","Creepster","FredokaOne","JosefinSans","Michroma","Roboto","RobotoCondensed","RobotoMono","Ubuntu","BuilderSans","BuilderSansMedium","BuilderSansBold","BuilderSansExtraBold"];
 const previewFontStacks:Record<string,string>={
-  Legacy:"Arial,sans-serif",
-  Arial:"Arial,sans-serif",
-  ArialBold:"Arial Black,Arial,sans-serif",
-  SourceSans:"Arial,sans-serif",
-  SourceSansBold:"Arial Black,Arial,sans-serif",
-  SourceSansLight:"Arial,sans-serif",
-  SourceSansItalic:"Arial,sans-serif",
-  Bodoni:"Bodoni 72,Didot,serif",
-  Garamond:"Garamond,serif",
-  Cartoon:"Comic Sans MS,cursive",
-  Code:"ui-monospace,SFMono-Regular,Menlo,monospace",
-  Highway:"Arial Narrow,Arial,sans-serif",
-  SciFi:"Orbitron,Arial,sans-serif",
-  Arcade:"Arial Black,Arial,sans-serif",
-  Fantasy:"Papyrus,fantasy",
-  Antique:"Georgia,serif",
-  SourceSansSemibold:"Arial,sans-serif",
-  Gotham:"Arial,sans-serif",
-  GothamMedium:"Arial,sans-serif",
-  GothamBold:"Arial Black,Arial,sans-serif",
-  GothamBlack:"Impact,Arial Black,Arial,sans-serif",
-  AmaticSC:"Amatic SC,cursive",
-  Bangers:"Bangers,Impact,cursive",
-  Creepster:"Creepster,Georgia,cursive",
-  FredokaOne:"Fredoka One,Arial,sans-serif",
-  JosefinSans:"Josefin Sans,Arial,sans-serif",
-  Michroma:"Michroma,Arial,sans-serif",
-  Roboto:"Roboto,Arial,sans-serif",
-  RobotoCondensed:"Roboto Condensed,Arial,sans-serif",
-  RobotoMono:"Roboto Mono,ui-monospace,monospace",
-  Ubuntu:"Ubuntu,Arial,sans-serif",
-  BuilderSans:"Arial,sans-serif",
-  BuilderSansMedium:"Arial,sans-serif",
-  BuilderSansBold:"Arial Black,Arial,sans-serif",
-  BuilderSansExtraBold:"Arial Black,Arial,sans-serif",
+  Legacy:"Arial,sans-serif",Arial:"Arial,sans-serif",ArialBold:"Arial Black,Arial,sans-serif",SourceSans:"Arial,sans-serif",SourceSansBold:"Arial Black,Arial,sans-serif",SourceSansLight:"Arial,sans-serif",SourceSansItalic:"Arial,sans-serif",Bodoni:"Bodoni 72,Didot,serif",Garamond:"Garamond,serif",Cartoon:"Comic Sans MS,cursive",Code:"ui-monospace,SFMono-Regular,Menlo,monospace",Highway:"Arial Narrow,Arial,sans-serif",SciFi:"Orbitron,Arial,sans-serif",Arcade:"Arial Black,Arial,sans-serif",Fantasy:"Papyrus,fantasy",Antique:"Georgia,serif",SourceSansSemibold:"Arial,sans-serif",Gotham:"Arial,sans-serif",GothamMedium:"Arial,sans-serif",GothamBold:"Arial Black,Arial,sans-serif",GothamBlack:"Impact,Arial Black,Arial,sans-serif",AmaticSC:"Amatic SC,cursive",Bangers:"Bangers,Impact,cursive",Creepster:"Creepster,Georgia,cursive",FredokaOne:"Fredoka One,Arial,sans-serif",JosefinSans:"Josefin Sans,Arial,sans-serif",Michroma:"Michroma,Arial,sans-serif",Roboto:"Roboto,Arial,sans-serif",RobotoCondensed:"Roboto Condensed,Arial,sans-serif",RobotoMono:"Roboto Mono,ui-monospace,monospace",Ubuntu:"Ubuntu,Arial,sans-serif",BuilderSans:"Arial,sans-serif",BuilderSansMedium:"Arial,sans-serif",BuilderSansBold:"Arial Black,Arial,sans-serif",BuilderSansExtraBold:"Arial Black,Arial,sans-serif",
 };
 function escapeRichText(value:string){return value.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&apos;");}
 function safeColor(value:string,fallback="#FFFFFF"){return /^#[0-9a-fA-F]{6}$/.test(value)?value.toUpperCase():fallback;}
@@ -57,7 +23,7 @@ function gradientColors(from:string,to:string,count:number){const a=hexToRgb(saf
 function wrapStyle(result:string,style:Style){const color=safeColor(style.color),strokeColor=safeColor(style.strokeColor,"#000000");if(style.bold)result=`<b>${result}</b>`;if(style.italic)result=`<i>${result}</i>`;if(style.underline)result=`<u>${result}</u>`;if(style.strike)result=`<s>${result}</s>`;result=`<font color=\"${color}\"><font size=\"${style.size}\"><font face=\"${style.face}\">${result}</font></font></font>`;if(style.stroke)result=`<stroke color=\"${strokeColor}\" thickness=\"${style.strokeThickness}\">${result}</stroke>`;return result;}
 function buildMarkup(text:string,style:Style,parts:Part[],mode:"single"|"parts"|"gradient",gradientFrom:string,gradientTo:string){
   let result="";
-  if(mode==="parts") result=parts.map(part=>`<font color=\"${safeColor(part.color)}\">${escapeRichText(part.text)}</font>`).join("");
+  if(mode==="parts") result=parts.map(part=>`<font face=\"${part.face}\"><font color=\"${safeColor(part.color)}\">${escapeRichText(part.text)}</font></font>`).join("");
   else if(mode==="gradient"){const chars=Array.from(text||"Your Lobby Name"),colors=gradientColors(gradientFrom,gradientTo,chars.filter(c=>c!==" ").length);let index=0;result=chars.map(char=>char===" "?" ":`<font color=\"${colors[index++]}\">${escapeRichText(char)}</font>`).join("");}
   else result=escapeRichText(text||"Your Lobby Name");
   return wrapStyle(result,style);
@@ -78,7 +44,7 @@ function previewMarkup(markup:string){
 export default function LobbyStyler(){
   const [text,setText]=useState("VIP Lobby");
   const [style,setStyle]=useState<Style>({bold:true,italic:false,underline:false,strike:false,color:"#B46CFF",size:"24",face:"GothamBold",stroke:true,strokeColor:"#160B22",strokeThickness:"2"});
-  const [parts,setParts]=useState<Part[]>([{text:"VIP",color:"#FFD700"},{text:" Lobby",color:"#B46CFF"}]);
+  const [parts,setParts]=useState<Part[]>([{text:"VIP",color:"#FFD700",face:"GothamBold"},{text:" Lobby",color:"#B46CFF",face:"GothamBold"}]);
   const [mode,setMode]=useState<"single"|"parts"|"gradient">("single");
   const [gradientFrom,setGradientFrom]=useState("#FF4DFF");
   const [gradientTo,setGradientTo]=useState("#4D8DFF");
@@ -87,15 +53,9 @@ export default function LobbyStyler(){
   const markup=useMemo(()=>buildMarkup(text,style,parts,mode,gradientFrom,gradientTo),[text,style,parts,mode,gradientFrom,gradientTo]);
   const preview=useMemo(()=>previewMarkup(markup),[markup]);
   function patch(next:Partial<Style>){setStyle(current=>({...current,...next}));setCopied(false);}
-  function splitWords(){const words=text.trim().split(/\s+/).filter(Boolean);if(!words.length)return;setParts(words.map((word,index)=>({text:(index?" ":"")+word,color:index%2?"#B46CFF":"#FFD700"})));setMode("parts");setCopied(false);}
+  function splitWords(){const words=text.trim().split(/\s+/).filter(Boolean);if(!words.length)return;setParts(words.map((word,index)=>({text:(index?" ":"")+word,color:index%2?"#B46CFF":"#FFD700",face:style.face})));setMode("parts");setCopied(false);}
   function updatePart(index:number,next:Partial<Part>){setParts(current=>current.map((part,i)=>i===index?{...part,...next}:part));setCopied(false);}
-  function handleTextChange(value:string){
-    setText(value);
-    if(mode!=="parts") return;
-    const words=value.trim().split(/\s+/).filter(Boolean);
-    setParts(current=>words.map((word,index)=>({text:(index?" ":"")+word,color:current[index]?.color??(index%2?"#B46CFF":"#FFD700")})));
-    setCopied(false);
-  }
+  function handleTextChange(value:string){setText(value);if(mode!=="parts")return;const words=value.trim().split(/\s+/).filter(Boolean);setParts(current=>words.map((word,index)=>({text:(index?" ":"")+word,color:current[index]?.color??(index%2?"#B46CFF":"#FFD700"),face:current[index]?.face??style.face})));setCopied(false);}
   async function copy(){try{await navigator.clipboard.writeText(markup);setCopied(true);setTimeout(()=>setCopied(false),1400);}catch{setCopied(false);}}
   return <section className={styles.editor}>
     <div className={styles.previewCard}><div className={styles.previewLabel}>PREVIEW</div><div className={styles.preview} dangerouslySetInnerHTML={{__html:preview}}/><div className={styles.previewHint}>Colors can be applied to individual words or characters using Roblox RichText.</div></div>
@@ -104,7 +64,7 @@ export default function LobbyStyler(){
       <div className={styles.presetHeading}><span>2 · PICK A STYLE</span><small>Start with a preset — you can customize it below.</small></div>
       <div className={styles.presetGrid}>{presets.map(preset=><button key={preset.name} className={styles.presetCard} type="button" onClick={()=>{setStyle(current=>({...current,...preset.style}));setCopied(false);}}><strong>{preset.emoji} {preset.name}</strong><span>{preset.name==="VIP Gold"?"Premium & shiny":preset.name==="Void"?"Dark & purple":preset.name==="Warning"?"Loud & attention-grabbing":"Simple & clean"}</span></button>)}</div>
       <div className={styles.colorModes}><button className={mode==="single"?styles.active:""} type="button" onClick={()=>setMode("single")}>ONE COLOR</button><button className={mode==="parts"?styles.active:""} type="button" onClick={splitWords}>COLOR WORDS</button><button className={mode==="gradient"?styles.active:""} type="button" onClick={()=>setMode("gradient")}>GRADIENT</button></div>
-      {mode==="parts"&&<div className={styles.partsPanel}><div className={styles.partsHeader}><span>COLOR EACH PART</span><small>Edit the words below and pick a color for each.</small></div>{parts.map((part,index)=><div className={styles.partRow} key={index}><input value={part.text} onChange={event=>updatePart(index,{text:event.target.value})}/><input type="color" value={safeColor(part.color)} onChange={event=>updatePart(index,{color:event.target.value.toUpperCase()})}/><input value={part.color} onChange={event=>updatePart(index,{color:event.target.value})}/></div>)}<button className={styles.addPart} type="button" onClick={()=>setParts(current=>[...current,{text:" new",color:"#FFFFFF"}])}>+ ADD PART</button></div>}
+      {mode==="parts"&&<div className={styles.partsPanel}><div className={styles.partsHeader}><span>COLOR EACH PART</span><small>Edit each word's color and font independently.</small></div>{parts.map((part,index)=><div className={styles.partRow} key={index}><input value={part.text} onChange={event=>updatePart(index,{text:event.target.value})}/><input type="color" value={safeColor(part.color)} onChange={event=>updatePart(index,{color:event.target.value.toUpperCase()})}/><input value={part.color} onChange={event=>updatePart(index,{color:event.target.value})}/><select value={part.face} onChange={event=>updatePart(index,{face:event.target.value})}>{faces.map(face=><option key={face}>{face}</option>)}</select></div>)}<button className={styles.addPart} type="button" onClick={()=>setParts(current=>[...current,{text:" new",color:"#FFFFFF",face:style.face}])}>+ ADD PART</button></div>}
       {mode==="gradient"&&<div className={styles.gradientPanel}><div className={styles.partsHeader}><span>GRADIENT</span><small>Roblox RichText has no true gradient tag, so this uses tiny per-character color steps.</small></div><div className={styles.gradientInputs}><label><span>START</span><input type="color" value={gradientFrom} onChange={event=>setGradientFrom(event.target.value.toUpperCase())}/></label><label><span>END</span><input type="color" value={gradientTo} onChange={event=>setGradientTo(event.target.value.toUpperCase())}/></label></div></div>}
       <button className={styles.advancedToggle} type="button" onClick={()=>setAdvanced(value=>!value)}>{advanced?"▾ HIDE CUSTOMIZATION":"▸ MORE CUSTOMIZATION"}</button>
       {advanced&&<div className={styles.advancedPanel}><div className={styles.buttonRow}>{([["B","bold"],["I","italic"],["U","underline"],["S","strike"]] as const).map(([label,key])=><button key={key} className={style[key]?styles.active:""} onClick={()=>patch({[key]:!style[key]})} aria-label={key} type="button">{label}</button>)}</div><div className={styles.grid}><label><span>COLOR</span><div className={styles.colorInput}><input type="color" value={safeColor(style.color)} onChange={event=>patch({color:event.target.value.toUpperCase()})}/><input value={style.color} onChange={event=>patch({color:event.target.value})} spellCheck={false}/></div></label><label><span>SIZE</span><select value={style.size} onChange={event=>patch({size:event.target.value})}>{["16","20","24","28","32","40","48"].map(size=><option key={size}>{size}</option>)}</select></label><label><span>FONT</span><select value={style.face} onChange={event=>patch({face:event.target.value})}>{faces.map(face=><option key={face}>{face}</option>)}</select></label><label><span>STROKE</span><select value={style.stroke?"on":"off"} onChange={event=>patch({stroke:event.target.value==="on"})}><option value="on">ON</option><option value="off">OFF</option></select></label></div>{style.stroke&&<div className={styles.grid}><label><span>STROKE COLOR</span><div className={styles.colorInput}><input type="color" value={safeColor(style.strokeColor,"#000000")} onChange={event=>patch({strokeColor:event.target.value.toUpperCase()})}/><input value={style.strokeColor} onChange={event=>patch({strokeColor:event.target.value})} spellCheck={false}/></div></label><label><span>STROKE WIDTH</span><select value={style.strokeThickness} onChange={event=>patch({strokeThickness:event.target.value})}>{["0.5","1","1.5","2","3","4"].map(size=><option key={size}>{size}</option>)}</select></label></div>}</div>}
