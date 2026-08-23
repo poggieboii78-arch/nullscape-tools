@@ -89,11 +89,18 @@ export default function LobbyStyler(){
   function patch(next:Partial<Style>){setStyle(current=>({...current,...next}));setCopied(false);}
   function splitWords(){const words=text.trim().split(/\s+/).filter(Boolean);if(!words.length)return;setParts(words.map((word,index)=>({text:(index?" ":"")+word,color:index%2?"#B46CFF":"#FFD700"})));setMode("parts");setCopied(false);}
   function updatePart(index:number,next:Partial<Part>){setParts(current=>current.map((part,i)=>i===index?{...part,...next}:part));setCopied(false);}
+  function handleTextChange(value:string){
+    setText(value);
+    if(mode!=="parts") return;
+    const words=value.trim().split(/\s+/).filter(Boolean);
+    setParts(current=>words.map((word,index)=>({text:(index?" ":"")+word,color:current[index]?.color??(index%2?"#B46CFF":"#FFD700")})));
+    setCopied(false);
+  }
   async function copy(){try{await navigator.clipboard.writeText(markup);setCopied(true);setTimeout(()=>setCopied(false),1400);}catch{setCopied(false);}}
   return <section className={styles.editor}>
     <div className={styles.previewCard}><div className={styles.previewLabel}>PREVIEW</div><div className={styles.preview} dangerouslySetInnerHTML={{__html:preview}}/><div className={styles.previewHint}>Colors can be applied to individual words or characters using Roblox RichText.</div></div>
     <div className={styles.controls}>
-      <label className={styles.fieldWide}><span>1 · NAME</span><input value={text} maxLength={100} onChange={event=>{setText(event.target.value);if(mode!=="single")setMode("single");}} placeholder="VIP Lobby" autoFocus/></label>
+      <label className={styles.fieldWide}><span>1 · NAME</span><input value={text} maxLength={100} onChange={event=>handleTextChange(event.target.value)} placeholder="VIP Lobby" autoFocus/></label>
       <div className={styles.presetHeading}><span>2 · PICK A STYLE</span><small>Start with a preset — you can customize it below.</small></div>
       <div className={styles.presetGrid}>{presets.map(preset=><button key={preset.name} className={styles.presetCard} type="button" onClick={()=>{setStyle(current=>({...current,...preset.style}));setCopied(false);}}><strong>{preset.emoji} {preset.name}</strong><span>{preset.name==="VIP Gold"?"Premium & shiny":preset.name==="Void"?"Dark & purple":preset.name==="Warning"?"Loud & attention-grabbing":"Simple & clean"}</span></button>)}</div>
       <div className={styles.colorModes}><button className={mode==="single"?styles.active:""} type="button" onClick={()=>setMode("single")}>ONE COLOR</button><button className={mode==="parts"?styles.active:""} type="button" onClick={splitWords}>COLOR WORDS</button><button className={mode==="gradient"?styles.active:""} type="button" onClick={()=>setMode("gradient")}>GRADIENT</button></div>
