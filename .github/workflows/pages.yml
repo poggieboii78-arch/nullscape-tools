@@ -29,11 +29,13 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf _site
-          mkdir -p _site/medal _site/altar _site/shop _site/compendium
+          mkdir -p _site/medal _site/altar _site/shop _site/shop-planner _site/compendium
           for app in tools-home medal-pool altar-calculator shop-calculator; do
             npm ci --prefix "apps/$app"
             (cd "apps/$app" && npx next build)
           done
+          npm install --prefix apps/shop-planner
+          (cd apps/shop-planner && npx next build)
           npm ci --prefix apps/tech-compendium
           (cd apps/tech-compendium && \
             mv app/api /tmp/nullscape-compendium-api && \
@@ -43,6 +45,7 @@ jobs:
           cp -R apps/medal-pool/out/. _site/medal/
           cp -R apps/altar-calculator/out/. _site/altar/
           cp -R apps/shop-calculator/out/. _site/shop/
+          cp -R apps/shop-planner/out/. _site/shop-planner/
           cp -R apps/tech-compendium/out/. _site/compendium/
           touch _site/.nojekyll
       - uses: actions/configure-pages@v5
